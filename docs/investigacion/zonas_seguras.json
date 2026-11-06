@@ -1,0 +1,184 @@
+{
+  "fecha": "2026-11-05",
+  "lienzo_referencia": "1080x1920",
+  "nota": "zonas_ui_px en px sobre el lienzo de cada plataforma (9:16 = 1080x1920). null = no publicado ni estimado. confianza: oficial|terceros|estimado.",
+  "plataformas": {
+    "tiktok": {
+      "formato": "9:16",
+      "resolucion": "1080x1920 recomendada; minimo anuncios 540x960",
+      "duracion_max_s": 600,
+      "peso_max_mb": 500,
+      "codec": "H.264/AAC (estimado); bitrate minimo 516 kbps",
+      "fps": "30",
+      "subtitulos": "quemados o nativos; sin SRT en anuncios (estimado)",
+      "portada": "9:16; recorte ~3:4 en perfil (estimado)",
+      "zonas_ui_px": {"arriba": 240, "abajo": 660, "izquierda": 120, "derecha": 140},
+      "rango_terceros": {"arriba": [130, 240], "abajo": [250, 660], "izquierda": [60, 120], "derecha": [120, 150]},
+      "fuente_url": "https://www.relevantaudience.com/tiktok-ads/tiktok-video-size-ad-specs/ ; https://www.socialync.io/tools/safe-zones/tiktok ; https://www.revid.ai/tiktok-safe-zone",
+      "confianza": "terceros"
+    },
+    "instagram_reels": {
+      "formato": "9:16",
+      "resolucion": "1080x1920",
+      "duracion_max_s": 180,
+      "peso_max_mb": 4096,
+      "codec": "H.264 o HEVC, AAC, ~5 Mbps (estimado)",
+      "fps": "30",
+      "subtitulos": "quemados o stickers nativos; sin SRT (estimado)",
+      "portada": "9:16; cuadricula de perfil 3:4 (1080x1440, recorta 240 px arriba y abajo); posible 4:5 (recorta 285)",
+      "zonas_ui_px": {"arriba": 270, "abajo": 672, "izquierda": 65, "derecha": 120},
+      "fuente_url": "https://adnova.ai/blogs/meta-ad-safe-zones-guide ; https://www.revid.ai/instagram-reels-safe-zone ; https://www.hopperhq.com/blog/instagram-reel-size/ ; https://www.facebook.com/business/help/980593475366490 (oficial, sin cifras extraidas)",
+      "duda": "duracion 20 min citada por blogs sin fuente primaria; peso no verificado",
+      "confianza": "terceros"
+    },
+    "instagram_stories": {
+      "formato": "9:16",
+      "resolucion": "1080x1920",
+      "duracion_max_s": 60,
+      "peso_max_mb": null,
+      "zonas_ui_px": {"arriba": 270, "abajo": 384, "izquierda": 65, "derecha": 65},
+      "fuente_url": "https://adnova.ai/blogs/meta-ad-safe-zones-guide",
+      "confianza": "terceros"
+    },
+    "youtube_shorts": {
+      "formato": "9:16",
+      "resolucion": "1080x1920 recomendada; minima 720x1280; maxima 2160x3840",
+      "duracion_max_s": 180,
+      "peso_max_mb": 262144000,
+      "peso_nota": "256 GB o 12 h, limite general de cuenta verificada; valor en MB = 256*1024*1000 aprox",
+      "codec": "H.264 High Profile, AAC-LC 48 kHz (oficial, pagina de codificacion general)",
+      "fps": "el de grabacion",
+      "subtitulos": "SRT subible en YouTube Studio (estimado)",
+      "portada": "2160x3840, 9:16, JPG/PNG, min 640 px de alto, 2 MB movil / 50 MB escritorio; solo desde Studio de escritorio y cuenta verificada (oficial)",
+      "zonas_ui_px": {"arriba": 270, "abajo": 480, "izquierda": 60, "derecha": 140},
+      "fuente_url": "https://support.google.com/youtube/answer/72431 ; https://support.google.com/youtube/answer/1722171 ; https://shortsync.app/resources/youtube-shorts-upload-requirements-2026",
+      "duda": "no existe cifra publicada de zona segura; 1:1 contradictorio",
+      "confianza": "estimado"
+    },
+    "youtube_horizontal": {
+      "formato": "16:9",
+      "resolucion": "1920x1080 (1080p); 3840x2160 (4K)",
+      "duracion_max_s": 43200,
+      "peso_max_mb": 262144000,
+      "peso_nota": "256 GB o 12 h (conocimiento previo, no re-verificado hoy)",
+      "codec": "MP4 H.264 High Profile, 2 B-frames, GOP cerrado, CABAC, 4:2:0; AAC-LC 48 kHz",
+      "fps": "24/25/30/48/50/60 segun grabacion",
+      "bitrate": "SDR 1080p 8 Mbps (<=30 fps) / 12 Mbps (48-60); 4K 35-45 / 53-68 Mbps",
+      "subtitulos": "SRT como pista (estimado)",
+      "portada": "3840x2160 recomendada, 16:9, min 640 px de ancho, JPG/PNG, 2 MB movil / 50 MB escritorio",
+      "zonas_ui_px": {"arriba": 65, "abajo": 110, "izquierda": 96, "derecha": 96},
+      "fuente_url": "https://support.google.com/youtube/answer/1722171 ; https://support.google.com/youtube/answer/72431",
+      "confianza": "oficial",
+      "nota_confianza": "especificaciones tecnicas oficiales; zonas_ui_px son estimadas"
+    },
+    "linkedin_9x16": {
+      "formato": "9:16",
+      "resolucion": "recomendada 720x1280; min 360x640; max 1080x1920",
+      "duracion_max_s": 1800,
+      "peso_max_mb": 500,
+      "codec": "MP4, H.264 o VP8, AAC; ProRes no soportado",
+      "fps": "menos de 30",
+      "subtitulos": "SRT solo texto, o quemados",
+      "portada": "JPG/PNG max 2 MB, misma relacion y resolucion del video",
+      "zonas_ui_px": {"arriba": 270, "abajo": 480, "izquierda": 65, "derecha": 120},
+      "fuente_url": "https://www.linkedin.com/help/lms/answer/85306",
+      "nota_confianza": "especificaciones oficiales; zonas de interfaz estimadas, solo movil",
+      "confianza": "oficial"
+    },
+    "linkedin_1x1": {
+      "formato": "1:1",
+      "resolucion": "min 360x360; max 1920x1920 (usar 1080x1080)",
+      "duracion_max_s": 1800,
+      "peso_max_mb": 500,
+      "codec": "MP4, H.264 o VP8, AAC",
+      "fps": "menos de 30",
+      "subtitulos": "SRT solo texto, o quemados",
+      "zonas_ui_px": {"arriba": 65, "abajo": 120, "izquierda": 65, "derecha": 65},
+      "fuente_url": "https://www.linkedin.com/help/lms/answer/85306",
+      "confianza": "oficial",
+      "nota_confianza": "especificaciones oficiales; zonas estimadas"
+    },
+    "linkedin_4x5": {
+      "formato": "4:5",
+      "resolucion": "recomendada 720x900; min 360x450; max 1080x1350",
+      "duracion_max_s": 1800,
+      "peso_max_mb": 500,
+      "codec": "MP4, H.264 o VP8, AAC",
+      "fps": "menos de 30",
+      "subtitulos": "SRT solo texto, o quemados",
+      "zonas_ui_px": {"arriba": 70, "abajo": 150, "izquierda": 65, "derecha": 65},
+      "fuente_url": "https://www.linkedin.com/help/lms/answer/85306",
+      "confianza": "oficial",
+      "nota_confianza": "especificaciones oficiales; zonas estimadas. Relacion vertical recomendada por LinkedIn"
+    },
+    "linkedin_16x9": {
+      "formato": "16:9",
+      "resolucion": "recomendada 1920x1080 o 1200x675; min 640x360; max 1920x1080",
+      "duracion_max_s": 1800,
+      "peso_max_mb": 500,
+      "codec": "MP4, H.264 o VP8, AAC",
+      "fps": "menos de 30",
+      "subtitulos": "SRT solo texto, o quemados",
+      "zonas_ui_px": {"arriba": 65, "abajo": 110, "izquierda": 96, "derecha": 96},
+      "fuente_url": "https://www.linkedin.com/help/lms/answer/85306",
+      "confianza": "oficial",
+      "nota_confianza": "especificaciones oficiales; zonas estimadas"
+    },
+    "facebook_reels": {
+      "formato": "9:16",
+      "resolucion": "1080x1920",
+      "duracion_max_s": 90,
+      "peso_max_mb": null,
+      "zonas_ui_px": {"arriba": 270, "abajo": 672, "izquierda": 65, "derecha": 65},
+      "fuente_url": "https://adnova.ai/blogs/meta-ad-safe-zones-guide",
+      "duda": "duracion maxima actual sin verificar",
+      "confianza": "terceros"
+    }
+  },
+  "cuadricula_instagram": {
+    "recorte_3x4": {"tamano": "1080x1440", "y_visible": [240, 1680], "confianza": "terceros"},
+    "recorte_4x5": {"tamano": "1080x1350", "y_visible": [285, 1635], "confianza": "terceros"},
+    "recorte_1x1": {"tamano": "1080x1080", "y_visible": [420, 1500], "confianza": "estimado"}
+  },
+  "zona_segura_universal": {
+    "criterio": "union de las zonas prohibidas; cifras de terceros y estimadas, ninguna oficial",
+    "9x16_1080x1920": {
+      "margenes_px": {"arriba": 270, "abajo": 672, "izquierda": 122, "derecha": 242},
+      "margenes_pct": {"arriba": 14.1, "abajo": 35.0, "izquierda": 11.3, "derecha": 22.4},
+      "rect": {"x0": 122, "y0": 270, "x1": 838, "y1": 1248},
+      "columna_botones": {"x_max": 780, "desde_y": 840, "nota": "en y>=840 el limite derecho baja de 838 a 780"},
+      "titulo_y_min": 285,
+      "confianza": "estimado"
+    },
+    "1x1_1080x1080": {
+      "margenes_px": {"arriba": 65, "abajo": 120, "izquierda": 65, "derecha": 65},
+      "rect": {"x0": 65, "y0": 65, "x1": 1015, "y1": 960},
+      "confianza": "estimado"
+    },
+    "4x5_1080x1350": {
+      "margenes_px": {"arriba": 70, "abajo": 150, "izquierda": 65, "derecha": 65},
+      "rect": {"x0": 65, "y0": 70, "x1": 1015, "y1": 1200},
+      "nota": "si se ve en cuadricula 3:4, mantener x entre 100 y 980",
+      "confianza": "estimado"
+    },
+    "16x9_1920x1080": {
+      "margenes_px": {"arriba": 65, "abajo": 110, "izquierda": 96, "derecha": 96},
+      "rect": {"x0": 96, "y0": 65, "x1": 1824, "y1": 970},
+      "confianza": "estimado"
+    }
+  },
+  "comparacion_equipo": {
+    "brand_json_vertical": {
+      "actual_pct": {"arriba": 14, "abajo": 22, "derecha": 14, "izquierda": 6},
+      "problema": "abajo (422 px) muy bajo frente a 672; derecha (151) bajo frente a 242/300; izquierda (65) bajo frente a 120"
+    },
+    "ride_the_lightning": {
+      "actual": "nada con x>=72,2 % y y>=43,75 %; y1=86 % del alto; x0=72 px",
+      "problema": "solo cubre la columna de botones; margen inferior de ~269 px (no 672) y pie de fuente en y~1862 caen dentro de la zona de interfaz"
+    },
+    "electric_eye_estandar": {
+      "actual_px": {"arriba": 220, "abajo": 380, "derecha": 140, "izquierda": 40},
+      "problema": "abajo e izquierda muy bajos; el propio documento dice que es criterio propio. 'universal' (269/672/242/122) coincide con la union recomendada"
+    }
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "_nota": "Línea gráfica MacroWise. Es taxonomía, no decoración. Sin neón, sin glow, sin degradados. Tarjetas SIEMPRE opacas.",
+  "colores": {
+    "fondo": "#1A1A17",
+    "tarjeta": "#232320",
+    "texto": "#D6D1C8",
+    "blanco": "#FFFFFF",
+    "lima": "#C6DD2E",
+    "oro": "#C9A84C",
+    "teal": "#50B5A2",
+    "purpura": "#73247D",
+    "terracota": "#C44A33",
+    "borde": "#4A4843"
+  },
+  "taxonomia": {
+    "valor": "oro",
+    "tecnico": "teal",
+    "geo": "purpura",
+    "coste": "terracota"
+  },
+  "fuentes": {
+    "titular": {
+      "familia": "Geist SemiBold",
+      "alterna": "Geist"
+    },
+    "mono": {
+      "familia": "Geist Mono Bold",
+      "alterna": "Geist Mono"
+    },
+    "dir": "brand/fonts"
+  },
+  "formatos": {
+    "vertical": {
+      "w": 1080,
+      "h": 1920
+    },
+    "horizontal": {
+      "w": 1920,
+      "h": 1080
+    },
+    "cuadrado": {
+      "w": 1080,
+      "h": 1080
+    },
+    "4x5": {
+      "w": 1080,
+      "h": 1350
+    }
+  },
+  "subtitulos": {
+    "max_palabras": 3,
+    "max_duracion_grupo": 1.25,
+    "pausa_corta_grupo": 0.45,
+    "tam_vertical": 78,
+    "tam_horizontal": 62,
+    "pos_vertical_y": 0.775,
+    "pos_horizontal_y": 0.88,
+    "color_base": "blanco",
+    "color_activa": "lima"
+  },
+  "encode": {
+    "x264": [
+      "-c:v",
+      "libx264",
+      "-crf",
+      "17",
+      "-preset",
+      "slow",
+      "-pix_fmt",
+      "yuv420p"
+    ],
+    "prores_alfa": [
+      "-c:v",
+      "prores_ks",
+      "-profile:v",
+      "4444",
+      "-pix_fmt",
+      "yuva444p10le"
+    ],
+    "audio": [
+      "-c:a",
+      "aac",
+      "-b:a",
+      "256k",
+      "-ar",
+      "48000"
+    ]
+  },
+  "audio": {
+    "lufs": -14.0,
+    "tp": -1.0,
+    "lra": 11.0
+  },
+  "capsula": {
+    "_nota": "Estilo 'presentador en cápsula + panel' (referencia Aztec Lab) con paleta MacroWise.",
+    "vertical": {
+      "x": 0.04,
+      "y": 0.035,
+      "w": 0.3,
+      "h": 0.17,
+      "radio": 38
+    },
+    "horizontal": {
+      "x": 0.03,
+      "y": 0.1,
+      "w": 0.18,
+      "h": 0.52,
+      "radio": 40
+    },
+    "cuadrado": {
+      "x": 0.04,
+      "y": 0.035,
+      "w": 0.3,
+      "h": 0.17,
+      "radio": 38
+    },
+    "4x5": {
+      "x": 0.04,
+      "y": 0.035,
+      "w": 0.3,
+      "h": 0.17,
+      "radio": 38
+    }
+  },
+  "_zonas": "Las zonas seguras viven en mw_editor/zonas.py (perfiles de Electric Eye + provisionales). No las dupliques aquí."
+}

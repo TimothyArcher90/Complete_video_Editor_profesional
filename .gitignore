@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+_pruebas/
+*.mp4
+*.mov
+*.wav
+*.mkv
+.env

@@ -1,0 +1,8 @@
+faster-whisper>=1.2
+opencv-python>=5.0
+numpy>=2.0
+Pillow>=11.0
+rembg>=2.0
+onnxruntime>=1.20
+# GPU Whisper en Windows (opcional): nvidia-cublas-cu12 nvidia-cudnn-cu12
+# Sistema: ffmpeg >= 8 en el PATH
