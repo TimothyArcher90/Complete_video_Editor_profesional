@@ -92,7 +92,7 @@ def cmd_editar(a):
         _sh.copyfile(a.plan, docs / "plan_grafico.json")
     for fm in formatos:
         W, H = dims(fm)
-        tomas = pl.tomas(keep, palabras, objetivo=a.toma)
+        tomas = pl.tomas(keep, palabras, objetivo=(6.0 if (W > H and a.toma == 3.6) else a.toma))   # largo horizontal: plano mediano 4,5-6 s (preset_largo)
         rec = pl.recortes(tomas, caras, info["ancho"], info["alto"], W, H, zoom_alt=a.zoom)
         base = exp / f"{nombre}_{fm}_v{n}_base.mp4"
         rn.render_base(src, rec, str(wav), str(base), fm, pre, post, fps=round(info["fps"]) if info.get("fps") else None, mostrar_progreso=a.progreso, luz=0.0 if a.sin_luz else a.luz, pilar=(W > H and info["ancho"] < info["alto"]))
@@ -206,7 +206,7 @@ def main():
     e.add_argument("--zoom", type=float, default=1.12, help="punch-in alterno")
     e.add_argument("--luz", type=float, default=1.0, help="intensidad de la luz de estudio sobre la cara (0 = apagada)")
     e.add_argument("--sin-luz", action="store_true")
-    e.add_argument("--estilo", choices=["visual", "clasico", "karaoke-cajas", "minimo"], default="visual", help="subtítulos: visual (palabra clave en caja de color) o clasico")
+    e.add_argument("--estilo", choices=["visual", "clasico", "karaoke-cajas", "minimo", "pildora"], default="visual", help="subtítulos: visual (palabra clave en caja de color) o clasico")
     e.add_argument("--zona", choices=["estandar", "meta-reels", "universal"], default="universal", help="perfil de zona segura 9:16 (universal = sirve en todas las redes)")
     e.add_argument("--look", choices=["warm_black", "stone_light", "oro_editorial", "teal_sutil", "ninguno"], default=None, help="look de color de marca (defecto warm_black)")
     e.add_argument("--color-modo", dest="color_modo", choices=["calidad", "rapido"], default=None, help="calidad = 16 bit; rapido = LUT 3D horneada (auto por duracion)")
@@ -225,7 +225,7 @@ def main():
     lo.add_argument("--out", required=True)
     lo.add_argument("--formato", choices=["vertical", "horizontal", "cuadrado", "4x5", "ambos", "todos"], default="ambos")
     lo.add_argument("--idioma", default="auto")
-    lo.add_argument("--estilo", choices=["visual", "clasico", "karaoke-cajas", "minimo"], default="visual")
+    lo.add_argument("--estilo", choices=["visual", "clasico", "karaoke-cajas", "minimo", "pildora"], default="visual")
     lo.add_argument("--lento", action="store_true", help="calidad final (preset slow, Whisper medium) en vez del modo rápido de pruebas")
     m = sp.add_parser("miniatura")
     m.add_argument("--video")
@@ -241,12 +241,27 @@ def main():
     c.add_argument("--plan", required=True)
     c.add_argument("--formato", choices=["vertical", "horizontal", "cuadrado", "4x5", "ambos", "todos"], default="ambos")
     c.add_argument("--preview", action="store_true")
-    c.add_argument("--estilo", choices=["visual", "clasico", "karaoke-cajas", "minimo"], default="visual")
+    c.add_argument("--estilo", choices=["visual", "clasico", "karaoke-cajas", "minimo", "pildora"], default="visual")
     c.add_argument("--version", type=int, help="solo esta versión (v1, v2 ...)")
+    rf = sp.add_parser("referencia", help="copia una referencia a REFERENCIAS, la mide y escribe el brand sheet borrador")
+    rf.add_argument("video")
+    rf.add_argument("--tipo", choices=["largo_horizontal", "reels_vertical", "miniaturas"], default="largo_horizontal")
+    rf.add_argument("--nombre")
+    sb = sp.add_parser("storyboard", help="hoja de contacto de los momentos con gráfico/rótulo antes de la entrega")
+    sb.add_argument("proyecto")
+    sb.add_argument("--formato", default="horizontal")
     from .produce import registrar, despachar  # subcomandos de producción masiva: produce | clips | exportar | sync
     registrar(sp)
     a = ap.parse_args()
     if despachar(a):
+        return
+    if a.cmd == "referencia":
+        from .referencia import cmd_referencia
+        cmd_referencia(a.video, a.tipo, a.nombre)
+        return
+    if a.cmd == "storyboard":
+        from .referencia import cmd_storyboard
+        cmd_storyboard(a.proyecto, a.formato)
         return
     if a.cmd == "proyecto":
         print(crear_proyecto(a.nombre, raiz=a.raiz))

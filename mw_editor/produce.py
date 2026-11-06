@@ -118,8 +118,22 @@ def produce(master, raiz=None, brief_path=None, nombre=None, n_reels=5, min_clip
     t0 = time.time()
     trn = proj / "03_TRANSCRIPT"
     if not sin_largo:
-        cmd_editar(ex.ns_editar(raw, proj, nombre, "horizontal", idioma=idioma, rapido=rapido, estilo="minimo", plan=str(plan_p) if plan_p else None))
+        cmd_editar(ex.ns_editar(raw, proj, nombre, "horizontal", idioma=idioma, rapido=rapido, estilo="pildora", plan=str(plan_p) if plan_p else None))
         T["largo_editar_s"] = round(time.time() - t0, 1)
+        try:                                       # rótulos grandes cada ~25 s (preset_largo); las cifras sin verificar las rechaza el motor
+            from argparse import Namespace
+            from . import plan_auto as pa
+            from .__main__ import cmd_componer
+            pal_f = json.loads((trn / "words_final.json").read_text(encoding="utf-8-sig"))
+            b2 = dict(brief)
+            b2.update({"sep_min": 25.0, "max_por_min": 3, "cifras_por_min": 4})
+            pl_auto = pa.componer_plan(pal_f, "horizontal", b2)
+            plan_p = proj / "05_PROJECT" / "plan_auto.json"
+            plan_p.write_text(json.dumps(pl_auto, ensure_ascii=False, indent=1), encoding="utf-8")
+            cmd_componer(Namespace(out=str(proj), plan=str(plan_p), formato="horizontal", version=str(ex._mejor_base(proj / "06_EXPORT", "horizontal")[1]), preview=False, estilo="pildora"))
+            manifiesto["avisos"].append(f"largo: {len(pl_auto['titulos_grandes'])} rótulos grandes propuestos (revisar tono) y {len(pl_auto['cifras'])} cifras candidatas SIN verificar (no salen en pantalla)")
+        except Exception as e:  # noqa: BLE001
+            manifiesto["avisos"].append(f"plan automático del largo no corrió: {str(e)[:80]}")
     elif not sin_reels and not (trn / "words.json").exists():
         from . import transcribir as tr
         trn.mkdir(exist_ok=True)

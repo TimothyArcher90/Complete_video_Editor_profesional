@@ -86,7 +86,7 @@ Ver `docs/RECETAS_REELS.md`: pasos con panel, comparativa de planes, "3 códigos
 - **Zonas seguras por red** (`mw_editor\zonas.py`): perfil `universal` por defecto en 9:16 (arriba 269, abajo 672, izq 122, der 242 px sobre 1080x1920; Electric Eye). 9 perfiles por plataforma + uniones (`MW_ZONA=tiktok+instagram-reels`). NINGUNA cifra es oficial: cada perfil declara su confianza. Guías para contrastar con capturas reales: `docs\guias_zonas\*.png` (`python -m mw_editor.guias_zonas`).
 - **Encuadre que no tapa la cara** (`planos.py`, `verificar_encuadre.py`): ojos al 30-38 %, subtítulo de una línea bajo la barbilla; mide con `python -m mw_editor.verificar_encuadre BASE.mp4 SUBS.ass`.
 - **Color** (`color.py`): 4 looks (`--look warm_black|stone_light|oro_editorial|teal_sutil`), piel a 123°, calidad 16 bit o LUT 3D horneada para largos (`--color-modo`).
-- **Subtítulos** (`--estilo visual|clasico|karaoke-cajas|minimo`), texto grande de énfasis y modo impacto (`enfasis.py`, `plan_auto.py`).
+- **Subtítulos** (`--estilo visual|clasico|karaoke-cajas|minimo|pildora`), texto grande de énfasis y modo impacto (`enfasis.py`, `plan_auto.py`).
 - **Formatos**: `--formato vertical|horizontal|cuadrado|4x5|ambos|todos`.
 - **Producción masiva**: `produce MASTER --raiz R --brief brief.txt --reels N [--lento]` (largo + capítulos + reels + miniaturas + 07_PUBLICAR por plataforma + fichas), `clips`, `exportar`, `sync`.
 - **QC y métricas**: `qc PROYECTO…` (puntuación 0-100, historial, manifiesto de IA); `lote CARPETA --out OUT` para tests masivos con comparación contra la corrida anterior.
@@ -94,3 +94,6 @@ Ver `docs/RECETAS_REELS.md`: pasos con panel, comparativa de planes, "3 códigos
 - **Mapas y gráficas** (`capas_externas.py`, `docs\investigacion\mapas_graficas_receta.md`): Electric Eye vive en `C:\electric-eye` (iniciar con `node servidor\iniciar.mjs`, pestaña en «Editor del mapa»); Ride the Lightning por CLI.
 - **Workflow agéntico completo**: `docs\WORKFLOW_AGENTICO.md`.
 - Whisper corre en GPU (CUDA) desde que `transcribir._registrar_dll_cuda` registra las DLL de pip nvidia-*. ffmpeg se lanza siempre sin stdin.
+
+## Largo horizontal (aplicado desde referencias reales, 2026-11-06)
+`produce` ya usa para el largo: estilo `pildora` (solo frases clave de 2-4 palabras en píldora opaca abajo a la izquierda, ~1 cada 9 s; la transcripción completa sigue en el SRT/ASS), tomas de ~6 s (`--toma` 3,6 solo en vertical), rótulos grandes propuestos cada ≥25 s (máx. 3/min) y un check de QC «ritmo largo» (4-8 cambios/min, ningún plano > 45 s). Las cifras candidatas salen `verificada:false` y el motor las rechaza hasta que se verifiquen. Reglas y medidas: `docs/investigacion/referencias_largo.md`, `mw_editor/preset_largo.py`.

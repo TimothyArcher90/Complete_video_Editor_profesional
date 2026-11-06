@@ -114,6 +114,15 @@ def qc_formato(exp, base, fm, hay_voz):
                 add("subtítulos en zona segura", "PASS" if dentro else "FAIL", f"caja {union} · zona {zona_preset() if fm == 'vertical' else 'provisional'} x[{int(x0)},{int(x1)}] y[{int(y0)},{int(y1)}]")
         elif not hay_voz:
             add("subtítulos", "WARN", "sin voz: no hay subtítulos")
+    if fm == "horizontal" and info["duracion"] > 60:
+        try:
+            from . import preset_largo as pr, ref_video as rv
+            ev = rv.clasificar(rv.diferencia_por_fotograma(base))
+            tc = [e["t"] for e in ev if e["tipo"] in ("corte_seco", "transicion_gradual")]
+            av = pr.revisar_ritmo(tc, info["duracion"])
+            add("ritmo largo (referencias)", "PASS" if not av else "WARN", "; ".join(av) or f"{len(tc) / (info['duracion'] / 60):.1f} cambios/min", len(tc))
+        except Exception as e:  # el QC de ritmo nunca debe tumbar la entrega
+            add("ritmo largo (referencias)", "WARN", f"no medible: {e}")
     return ck
 
 

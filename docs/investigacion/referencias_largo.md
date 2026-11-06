@@ -37,5 +37,11 @@ Colores de marca ajena (azul eléctrico, amarillo UPSB), logotipos, resplandores
 ## Integración
 `mw_editor/preset_largo.py` guarda estas reglas como datos (`RITMO`, `TRANSICIONES`, `LETRAS_GRANDES`, `SUBTITULOS_LARGO`, `GRAFICOS`) y `revisar_ritmo()` audita el ritmo de nuestro largo contra ellas. Herramienta: `mw_editor/ref_video.py` (cortes, transiciones, audio de cualquier referencia).
 
+## Aplicado en el motor (2026-11-06)
+- `--estilo pildora` (subs.py): píldora Warm Dark opaca, punto lima, texto Stone Light, palabra clave con color de taxonomía, ≥ 9 s entre píldoras (`MW_PILDORA_SEP`). Prueba sobre 34,5 min de Raoul: 93 píldoras (2,7/min).
+- `produce`: largo con `pildora`, tomas de 6 s, plan automático con rótulos cada ≥ 25 s y `cmd_componer` posterior; la variante de publicación con subtítulos quemados sigue usando `minimo` (legible sin sonido).
+- QC: check «ritmo largo (referencias)» solo WARN.
+- Pendiente: B-roll y gráficos propuestos automáticamente por cifra (hoy los pone Claude con Electric Eye / Ride the Lightning).
+
 ## Límites de este análisis
 Dos videos son una muestra; el detector no distingue un zoom digital de un corte; no se midió el audio de música/efectos por separado. Las reglas son punto de partida, se afinan con más referencias.

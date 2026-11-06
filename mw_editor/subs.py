@@ -24,8 +24,8 @@ FUENTE_TITULAR = "Geist SemiBold"
 FUENTE_MONO = "Geist Mono Bold"
 _TTF = {"titular": FONTS_DIR / "Geist-SemiBold.ttf", "mono": FONTS_DIR / "GeistMono-Bold.ttf"}
 K_LIBASS = 0.84            # ancho renderizado / ancho PIL al mismo \fs (calibrado, ver docstring)
-ESTILOS_SUBS = ("visual", "clasico", "karaoke-cajas", "minimo")
-_ALIAS = {"clásico": "clasico", "karaoke": "karaoke-cajas", "karaoke_cajas": "karaoke-cajas", "mínimo": "minimo"}
+ESTILOS_SUBS = ("visual", "clasico", "karaoke-cajas", "minimo", "pildora")
+_ALIAS = {"píldora": "pildora", "clásico": "clasico", "karaoke": "karaoke-cajas", "karaoke_cajas": "karaoke-cajas", "mínimo": "minimo"}
 # \fs (px ASS) por formato. El em real es 0.84 × fs: 94 -> 79 px = 4.1 % del alto en 9:16 (requisito ≥ 4 %).
 _FS = {
     "vertical": {"base": 94, "minimo": 80},
@@ -439,6 +439,57 @@ def _minimo(palabras, formato, ruta, ocultar=None, tam=None):
     return n
 
 
+# ---------- estilo PÍLDORA (largo / horizontal; gramática medida en referencias reales) ----------
+def _pildora(palabras, formato, ruta, ocultar=None, tam=None):
+    """Largo horizontal: NO transcripción corrida. Sólo frases clave de 2-4 palabras en una píldora opaca (Warm Dark) en el tercio inferior
+    izquierdo, como máximo una cada `sep` s (por defecto 9). Texto Stone Light en mayúsculas; la palabra clave toma el color de su taxonomía.
+    La transcripción completa sigue en el SRT/ASS editable aparte (accesibilidad y YouTube). Ver docs/investigacion/referencias_largo.md."""
+    lugares, activos = _vocab()
+    P = _P(formato, "minimo", tam)
+    C = BRAND["colores"]
+    fs = P.fs * 0.82
+    sep = float(os.environ.get("MW_PILDORA_SEP", "9"))
+    ev = [_cabecera(P.w, P.h, _estilos_pal(P))]
+    grupos = agrupar_linea(palabras, fs, P.zw * 0.45, max_pal=4, max_dur=2.2, pausa=0.5)
+    cand = []
+    for g in grupos:
+        if len(g) < 2:
+            continue
+        idx, cat = _elegir_clave(g, lugares, activos, False)
+        if idx is None:
+            continue
+        pts = _categoria(g[idx]["w"], lugares, activos)[1]
+        if pts < 60:
+            continue
+        cand.append((pts + (10 if cat in ("valor", "tecnico", "coste") else 0), g, idx, cat))
+    elegidas, ult = [], -1e9
+    for pts, g, idx, cat in sorted(cand, key=lambda c: c[1][0]["s"]):
+        ini = g[0]["s"]
+        if ini - ult >= sep and not _ocultos(ini, g[-1]["e"], ocultar):
+            elegidas.append((g, idx, cat))
+            ult = ini
+    alto = 1.05 * fs
+    px = 0.55 * fs
+    for g, idx, cat in elegidas:
+        ini = g[0]["s"]
+        fin = min(max(g[-1]["e"] + 0.35, ini + 1.8), ini + 3.2)
+        textos = [_esc(x["w"]).upper() for x in g]
+        total = sum(ancho_real(t, fs) for t in textos) + ancho_real(" ", fs) * (len(g) - 1)
+        bw = total + 2 * px + 0.45 * fs
+        bx, by = P.x0, P.y1 - alto
+        ev.append(f"Dialogue: 2,{ass_time(ini)},{ass_time(fin)},Card,,0,0,0,,{{\\an7\\move({bx:.0f},{by + 12:.0f},{bx:.0f},{by:.0f},0,180)\\1c{ass_c(C['tarjeta'])}\\bord0\\shad0\\fad(160,140)\\p1}}{rrect(bw, alto, alto / 2)}{{\\p0}}\n")
+        d = 0.22 * fs
+        ev.append(f"Dialogue: 3,{ass_time(ini)},{ass_time(fin)},Card,,0,0,0,,{{\\an7\\move({bx + px:.0f},{by + alto / 2 - d / 2 + 12:.0f},{bx + px:.0f},{by + alto / 2 - d / 2:.0f},0,180)\\1c{ass_c(C['lima'])}\\bord0\\shad0\\fad(160,140)\\p1}}{rrect(d, d, d / 2)}{{\\p0}}\n")
+        partes = []
+        for i, t in enumerate(textos):
+            col = color_marca(cat) if i == idx else C["texto"]
+            partes.append(f"{{\\1c{ass_c(col)}}}{t}")
+        x_txt = bx + px + d + 0.35 * fs
+        ev.append(f"Dialogue: 4,{ass_time(ini)},{ass_time(fin)},Pal,,0,0,0,,{{\\an4\\fs{fs:.0f}\\move({x_txt:.0f},{by + alto / 2 + 12:.0f},{x_txt:.0f},{by + alto / 2:.0f},0,180)\\fad(160,140)}}{' '.join(partes)}\n")
+    _escribir(ev, ruta)
+    return len(elegidas)
+
+
 # ---------- selector ----------
 def estilo_valido(estilo):
     e = _ALIAS.get(estilo, estilo)
@@ -451,7 +502,7 @@ def ass_subtitulos_estilo(palabras, formato, ruta, estilo="visual", ocultar=None
     """Punto de entrada único. estilo: visual | clasico | karaoke-cajas | minimo. La variable de entorno MW_ESTILO_SUBS lo fuerza
     (útil mientras __main__ sólo conozca 'visual'/'clasico'). Devuelve el nº de grupos."""
     e = estilo_valido(os.environ.get("MW_ESTILO_SUBS") or estilo)
-    fn = {"visual": _visual, "clasico": _clasico, "karaoke-cajas": _karaoke, "minimo": _minimo}[e]
+    fn = {"visual": _visual, "clasico": _clasico, "karaoke-cajas": _karaoke, "minimo": _minimo, "pildora": _pildora}[e]
     return fn(palabras, formato, ruta, ocultar=ocultar, tam=tam)
 
 

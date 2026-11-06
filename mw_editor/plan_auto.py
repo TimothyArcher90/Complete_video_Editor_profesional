@@ -57,6 +57,9 @@ def componer_plan(pal, formato="vertical", brief=None, dur_total=None):
     cfg = {k: brief[k] for k in ("max_por_min", "sep_min", "cifras_por_min", "max_solape") if k in brief}
     e = en.proponer(pal, formato=formato, idioma=brief.get("idioma"), evitar=evitar, cfg=cfg, dur_total=fin)
     plan["titulos_grandes"] = e["titulos_grandes"]
+    if formato != "vertical":                       # largo: caja opaca Warm Black detrás (sobre pantallas claras el lima no se lee)
+        for tg in plan["titulos_grandes"]:
+            tg.setdefault("caja", True)
     plan["impacto"] = e["impacto"]
     plan["cifras"] = e["cifras"]
     if not cta:
