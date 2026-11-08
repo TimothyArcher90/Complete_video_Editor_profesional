@@ -43,7 +43,7 @@ def _png_capsula(w, h, radio, carpeta, nombre):
     mp = Path(carpeta) / f"{nombre}_mask.png"
     m.save(mp)
     fr = Image.new("RGBA", (w * s, h * s), (0, 0, 0, 0))
-    ImageDraw.Draw(fr).rounded_rectangle((0, 0, w * s - 1, h * s - 1), radio * s, outline=hex_rgb(BRAND["colores"]["lima"]) + (255,), width=6 * s)
+    ImageDraw.Draw(fr).rounded_rectangle((0, 0, w * s - 1, h * s - 1), radio * s, outline=hex_rgb(BRAND["colores"]["oro"]) + (255,), width=6 * s)
     fr = fr.resize((w, h), Image.LANCZOS)
     fp = Path(carpeta) / f"{nombre}_marco.png"
     fr.save(fp)

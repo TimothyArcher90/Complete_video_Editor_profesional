@@ -20,6 +20,12 @@ from PIL import ImageFont
 from .zonas import caja_segura_px, es_vertical, seg as zona_seg
 from .common import BRAND, FONTS_DIR, ass_c, ass_color, ass_time, color_marca, dims, srt_time
 
+
+def _cm(nombre):
+    """Línea gráfica OFICIAL en video (David 2026-11-08): acentos solo oro/teal/púrpura (+ rojo para coste). El lima es solo de miniaturas."""
+    return color_marca("oro" if nombre == "lima" else nombre)
+
+
 FUENTE_TITULAR = "Geist SemiBold"
 FUENTE_MONO = "Geist Mono Bold"
 _TTF = {"titular": FONTS_DIR / "Geist-SemiBold.ttf", "mono": FONTS_DIR / "GeistMono-Bold.ttf"}
@@ -123,9 +129,9 @@ def agrupar_linea(palabras, fs, ancho_max, max_pal=4, max_dur=1.7, pausa=0.45, r
 def _color_base(token):
     t = token.strip()
     if "%" in t:
-        return color_marca("tecnico")
+        return _cm("tecnico")
     if re.search(r"[$€]|US\$|\bCOP\b", t):
-        return color_marca("valor")
+        return _cm("valor")
     return BRAND["colores"]["blanco"]
 
 
@@ -303,7 +309,7 @@ def _visual(palabras, formato, ruta, ocultar=None, tam=None):
             xc, a = cs[i]
             t0 = wd["s"]
             if claves[i]:
-                col = color_marca(cat)
+                col = _cm(cat)
                 bw, bh = a + 2 * (0.20 * fs), 0.98 * fs
                 ev.append(_caja_dialogo(t0, fin, xc - bw / 2, P.yc - bh / 2 + 2, bw, bh, col))
                 txt_col = C["fondo"] if cat in _CAJA_TEXTO_OSCURO else C["blanco"]
@@ -321,7 +327,7 @@ def _clasico(palabras, formato, ruta, ocultar=None, tam=None):
     C = BRAND["colores"]
     ev = [_cabecera(P.w, P.h, _estilos_pal(P))]
     grupos = _grupos_estilo(palabras, P, "clasico")
-    activa = ass_c(color_marca(BRAND["subtitulos"]["color_activa"]))
+    activa = ass_c(_cm(BRAND["subtitulos"]["color_activa"]))
     for gi, g in enumerate(grupos):
         ini, fin = _tiempos(grupos, gi, extra=0.10, minimo=0.25)
         if _ocultos(ini, fin, ocultar):
@@ -359,7 +365,7 @@ def _karaoke(palabras, formato, ruta, ocultar=None, tam=None):
         for i, wd in enumerate(g):
             xc, a = cs[i]
             c, p = _categoria(wd["w"], *_vocab_cache(lugares, activos))
-            col = color_marca(c) if (c and p >= 55) else C["lima"]
+            col = _cm(c) if (c and p >= 55) else C["oro"]
             oscuro = (c in _CAJA_TEXTO_OSCURO) or not (c and p >= 55)
             a0 = wd["s"]
             a1 = g[i + 1]["s"] if i + 1 < len(g) else fin
@@ -482,7 +488,7 @@ def _pildora(palabras, formato, ruta, ocultar=None, tam=None):
         ev.append(f"Dialogue: 3,{ass_time(ini)},{ass_time(fin)},Card,,0,0,0,,{{\\an7\\move({bx + px:.0f},{by + alto / 2 - d / 2 + 12:.0f},{bx + px:.0f},{by + alto / 2 - d / 2:.0f},0,180)\\1c{ass_c(C['lima'])}\\bord0\\shad0\\fad(160,140)\\p1}}{rrect(d, d, d / 2)}{{\\p0}}\n")
         partes = []
         for i, t in enumerate(textos):
-            col = color_marca(cat) if i == idx else C["texto"]
+            col = _cm(cat) if i == idx else C["texto"]
             partes.append(f"{{\\1c{ass_c(col)}}}{t}")
         x_txt = bx + px + d + 0.35 * fs
         ev.append(f"Dialogue: 4,{ass_time(ini)},{ass_time(fin)},Pal,,0,0,0,,{{\\an4\\fs{fs:.0f}\\move({x_txt:.0f},{by + alto / 2 + 12:.0f},{x_txt:.0f},{by + alto / 2:.0f},0,180)\\fad(160,140)}}{' '.join(partes)}\n")
@@ -665,7 +671,7 @@ def _titulo_grande(ev, tg, P, esc, C):
         anim = "subir"
     yb = P["y_top"]
     nombre_col = tg.get("color", "lima")
-    col = color_marca(nombre_col)
+    col = _cm(nombre_col)
     en_caja = bool(tg.get("caja", nombre_col in _COLOR_EN_CAJA))
     fs1, fs2 = 66 * esc, 118 * esc
     amax = zw * 0.96 - (2 * 0.2 * fs2 if en_caja else 0)
@@ -744,7 +750,7 @@ def _impacto(ev, im, P, C, avisos):
     fs = 100.0
     fs = fs * (P["zw"] * 0.98) / max(1.0, ancho_real(txt, fs))
     fs = min(fs, P["h"] * 0.22)
-    col = color_marca(im.get("color", "lima"))
+    col = _cm(im.get("color", "lima"))
     y = (P["y_top"] + P["y_bot"]) / 2 if "y" not in im else P["h"] * im["y"]
     ms = int(dur * 1000)
     ev.append(f"Dialogue: 5,{ass_time(t0)},{ass_time(t1)},Tit,,0,0,0,,"
@@ -776,10 +782,10 @@ def ass_graficos(plan, formato, ruta):
         if es_vertical(formato):
             y = sy_top + 14 * esc  # arriba, justo bajo el margen seguro: el subtítulo ocupa la parte baja de la zona
         ev.append(_forma(0, t0, t1, x, y, cw, ch, 14 * esc, C["tarjeta"], entra=(-60 * esc, 0)))
-        ev.append(_forma(1, t0, t1, x, y, 9 * esc, ch, 4 * esc, C["lima"], entra=(-60 * esc, 0)))
+        ev.append(_forma(1, t0, t1, x, y, 9 * esc, ch, 4 * esc, C["oro"], entra=(-60 * esc, 0)))
         ev.append(_texto(2, t0, t1, x + pad + 9 * esc, y + pad * 0.85, lt["nombre"], "Tit", C["blanco"], tam=int(tn), spacing=-0.03 * tn, entra=(-60 * esc, 0)))
         if lt.get("rol"):
-            ev.append(_texto(2, t0, t1, x + pad + 9 * esc, y + pad * 0.85 + tn + 6 * esc, lt["rol"].upper(), "Mono", C["texto"], tam=int(tr), spacing=0.18 * tr, entra=(-60 * esc, 0)))
+            ev.append(_texto(2, t0, t1, x + pad + 9 * esc, y + pad * 0.85 + tn + 6 * esc, lt["rol"].upper(), "Mono", C["texto"], tam=int(tr), spacing=0.32 * tr, entra=(-60 * esc, 0)))
 
     for ti in plan.get("titulos", []):
         t0, t1 = ti["t"], ti["t"] + ti.get("dur", 3.0)
@@ -789,10 +795,10 @@ def ass_graficos(plan, formato, ruta):
         cw = max(max(anchos), medir(ti.get("etiqueta", "").upper(), tl, "mono", 0.18 * tl)) + 90 * esc
         ch = tl + len(lineas) * tt * 1.12 + 90 * esc
         x, y = cxs - cw / 2, (sy_top + 24 * esc + ch / 2 if es_vertical(formato) else h * 0.36 - ch / 2) - (ch / 2 if es_vertical(formato) else 0)
-        borde = color_marca(ti.get("color", "lima"))
+        borde = _cm(ti.get("color", "lima"))
         ev.append(_forma(0, t0, t1, x, y, cw, ch, 22 * esc, C["fondo"], borde=borde, bord=max(2, int(3 * esc)), entra=(0, 40 * esc)))
         if ti.get("etiqueta"):
-            ev.append(_texto(2, t0, t1, cxs, y + 40 * esc, ti["etiqueta"].upper(), "Mono", color_marca("oro"), an=8, tam=int(tl), spacing=0.18 * tl, entra=(0, 40 * esc)))
+            ev.append(_texto(2, t0, t1, cxs, y + 40 * esc, ti["etiqueta"].upper(), "Mono", _cm("oro"), an=8, tam=int(tl), spacing=0.32 * tl, entra=(0, 40 * esc)))
         for i, l in enumerate(lineas):
             ev.append(_texto(2, t0, t1, cxs, y + 40 * esc + tl + 18 * esc + i * tt * 1.12, l, "Tit", C["blanco"], an=8, tam=int(tt), spacing=-0.03 * tt, entra=(0, 40 * esc)))
 
@@ -801,7 +807,7 @@ def ass_graficos(plan, formato, ruta):
             avisos.append(f"CIFRA RECHAZADA '{ci.get('valor')}' en t={ci.get('t')}: falta 'fuente' y 'verificada:true' (una cifra rotulada es una afirmación de marca)")
             continue
         t0, t1 = ci["t"], ci["t"] + ci.get("dur", 3.5)
-        col = color_marca(ci.get("tipo", "valor"))
+        col = _cm(ci.get("tipo", "valor"))
         k = float(ci.get("escala", 1.0))
         tv, tl, tf = 150 * esc * k, 26 * esc * k, 20 * esc * k
         wv = medir(ci["valor"], tv, "titular", -0.03 * tv)
@@ -812,9 +818,9 @@ def ass_graficos(plan, formato, ruta):
         x = cxs - cw / 2 if es_vertical(formato) else (sx if ci.get("lado") == "izq" else sw_right - cw)
         y = sy_top + 24 * esc if es_vertical(formato) else (h * ci["y_frac"] if "y_frac" in ci else sy_top + 30 * esc)
         ev.append(_forma(0, t0, t1, x, y, cw, ch, 22 * esc, C["tarjeta"], borde=col, bord=max(2, int(3 * esc)), entra=(0, 40 * esc)))
-        ev.append(_texto(2, t0, t1, x + cw / 2, y + 36 * esc, ci.get("etiqueta", "").upper(), "Mono", col, an=8, tam=int(tl), spacing=0.18 * tl, entra=(0, 40 * esc)))
+        ev.append(_texto(2, t0, t1, x + cw / 2, y + 36 * esc, ci.get("etiqueta", "").upper(), "Mono", col, an=8, tam=int(tl), spacing=0.32 * tl, entra=(0, 40 * esc)))
         ev.append(_texto(2, t0, t1, x + cw / 2, y + 36 * esc + tl + 10 * esc, ci["valor"], "Tit", col, an=8, tam=int(tv), spacing=-0.03 * tv, entra=(0, 40 * esc)))
-        ev.append(_texto(2, t0, t1, x + cw / 2, y + ch - 34 * esc - tf, "FUENTE: " + ci["fuente"].upper(), "Mono", C["texto"], an=8, tam=int(tf), spacing=0.18 * tf, entra=(0, 40 * esc)))
+        ev.append(_texto(2, t0, t1, x + cw / 2, y + ch - 34 * esc - tf, "FUENTE: " + ci["fuente"].upper(), "Mono", C["texto"], an=8, tam=int(tf), spacing=0.32 * tf, entra=(0, 40 * esc)))
 
     # Títulos grandes sobre el presentador (estilo reels Aztec Lab, paleta MacroWise): línea fina + línea clave en lima, sin caja salvo púrpura/terracota.
     # Claves: t, dur, linea1, linea2, color (lima|oro|teal|purpura|terracota), anim (subir|escala|reveal|barrido), caja (bool), y (fracción del alto, sólo no verticales).
@@ -835,7 +841,7 @@ def ass_graficos(plan, formato, ruta):
         kc = float(cta.get("escala", 1.0))
         tv, tp, te = 62 * esc * kc, 140 * esc * kc, 36 * esc * kc
         ev.append(_texto(2, t0, t1, cxs, yb, cta.get("verbo", "Comenta"), "Fino", C["blanco"], an=8, tam=int(tv), spacing=-0.02 * tv, entra=(0, 30 * esc), sombra=True, fade=True))
-        ev.append(_texto(2, t0, t1, cxs, yb + tv * 1.2, "“" + cta["palabra"] + "”", "Tit", color_marca("lima"), an=8, tam=int(tp), spacing=-0.03 * tp, entra=(0, 30 * esc), sombra=True, fade=True))
+        ev.append(_texto(2, t0, t1, cxs, yb + tv * 1.2, "“" + cta["palabra"] + "”", "Tit", _cm("lima"), an=8, tam=int(tp), spacing=-0.03 * tp, entra=(0, 30 * esc), sombra=True, fade=True))
         if cta.get("extra"):
             ev.append(_texto(2, t0, t1, cxs, yb + tv * 1.2 + tp * 1.25, cta["extra"], "Fino", C["blanco"], an=8, tam=int(te), entra=(0, 30 * esc), sombra=True, fade=True))
 
