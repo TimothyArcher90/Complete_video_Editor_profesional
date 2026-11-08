@@ -762,6 +762,13 @@ def _impacto(ev, im, P, C, avisos):
 
 
 # ---------- tarjetas de marca ----------
+def _pantalla(ev, t0, t1, w, h, C):
+    """Panel a pantalla completa, OPACO (Warm Black, sin transparencia: Premiere mezcla las semitransparentes más grisáceas).
+    Lo usa revisor_capas cuando una tarjeta no cabe en ninguna zona libre de cara: el presentador se oculta ese rato (el audio sigue)."""
+    ev.append(f"Dialogue: 0,{ass_time(t0)},{ass_time(t1)},Card,,0,0,0,,"
+              f"{{\\an7\\pos(0,0)\\1c{ass_c(C['fondo'])}\\bord0\\shad0\\fad(120,120)\\p1}}{rrect(w, h, 0)}{{\\p0}}\n")
+
+
 def ass_graficos(plan, formato, ruta):
     """lower_thirds, titulos, cifras, titulos_grandes, impacto, cta -> un ASS. Las cifras exigen 'fuente' y 'verificada': si no, se rechazan (regla de marca)."""
     w, h = dims(formato)
@@ -776,14 +783,24 @@ def ass_graficos(plan, formato, ruta):
 
     for lt in plan.get("lower_thirds", []):
         t0, t1 = lt["t"], lt["t"] + lt.get("dur", 4.0)
-        tn, tr = 50 * esc, 24 * esc
+        klt = float(lt.get("escala", 1.0))
+        tn, tr = 50 * esc * klt, 24 * esc * klt
         wn = medir(lt["nombre"], tn, "titular", -0.03 * tn)
         wr = medir(lt.get("rol", "").upper(), tr, "mono", 0.18 * tr)
-        pad = 26 * esc
-        cw, ch = max(wn, wr) + pad * 2 + 12 * esc, tn + tr + pad * 1.8
+        pad = 26 * esc * klt
+        cw, ch = max(wn, wr) + pad * 2 + 12 * esc * klt, tn + tr + pad * 1.8
         x, y = sx, sy_bot - ch - (h * 0.04 if es_vertical(formato) else 0)
         if es_vertical(formato):
             y = sy_top + 14 * esc  # arriba, justo bajo el margen seguro: el subtítulo ocupa la parte baja de la zona
+        if lt.get("lado") == "der":
+            x = sw_right - cw
+        elif lt.get("lado") == "centro":
+            x = cxs - cw / 2
+        if "y_frac" in lt:                       # reubicado por revisor_capas (nunca sobre la cara)
+            y = h * lt["y_frac"]
+        if lt.get("modo") == "pantalla":
+            _pantalla(ev, t0, t1, w, h, C)
+            x, y = cxs - cw / 2, (h - ch) / 2
         ev.append(_forma(0, t0, t1, x, y, cw, ch, 14 * esc, C["tarjeta"], entra=(-60 * esc, 0)))
         ev.append(_forma(1, t0, t1, x, y, 9 * esc, ch, 4 * esc, C["oro"], entra=(-60 * esc, 0)))
         ev.append(_texto(2, t0, t1, x + pad + 9 * esc, y + pad * 0.85, lt["nombre"], "Tit", C["blanco"], tam=int(tn), spacing=-0.03 * tn, entra=(-60 * esc, 0)))
@@ -792,18 +809,29 @@ def ass_graficos(plan, formato, ruta):
 
     for ti in plan.get("titulos", []):
         t0, t1 = ti["t"], ti["t"] + ti.get("dur", 3.0)
-        tt, tl = 92 * esc, 26 * esc
+        kti = float(ti.get("escala", 1.0))
+        tt, tl = 92 * esc * kti, 26 * esc * kti
         lineas = _partir(ti["texto"], tt, (sw_right - sx) - 80 * esc)
         anchos = [medir(l, tt, "titular", -0.03 * tt) for l in lineas]
         cw = max(max(anchos), medir(ti.get("etiqueta", "").upper(), tl, "mono", 0.18 * tl)) + 90 * esc
         ch = tl + len(lineas) * tt * 1.12 + 90 * esc
         x, y = cxs - cw / 2, (sy_top + 24 * esc + ch / 2 if es_vertical(formato) else h * 0.36 - ch / 2) - (ch / 2 if es_vertical(formato) else 0)
+        if "y_frac" in ti:
+            y = h * ti["y_frac"]
+        if ti.get("lado") == "der":
+            x = sw_right - cw
+        elif ti.get("lado") == "izq":
+            x = sx
+        if ti.get("modo") == "pantalla":
+            _pantalla(ev, t0, t1, w, h, C)
+            x, y = cxs - cw / 2, (h - ch) / 2
+        cxt = x + cw / 2
         borde = _cm(ti.get("color", "lima"))
         ev.append(_forma(0, t0, t1, x, y, cw, ch, 22 * esc, C["fondo"], borde=borde, bord=max(2, int(3 * esc)), entra=(0, 40 * esc)))
         if ti.get("etiqueta"):
-            ev.append(_texto(2, t0, t1, cxs, y + 40 * esc, ti["etiqueta"].upper(), "Mono", _cm("oro"), an=8, tam=int(tl), spacing=0.32 * tl, entra=(0, 40 * esc)))
+            ev.append(_texto(2, t0, t1, cxt, y + 40 * esc, ti["etiqueta"].upper(), "Mono", _cm("oro"), an=8, tam=int(tl), spacing=0.32 * tl, entra=(0, 40 * esc)))
         for i, l in enumerate(lineas):
-            ev.append(_texto(2, t0, t1, cxs, y + 40 * esc + tl + 18 * esc + i * tt * 1.12, l, "Tit", C["blanco"], an=8, tam=int(tt), spacing=-0.03 * tt, entra=(0, 40 * esc)))
+            ev.append(_texto(2, t0, t1, cxt, y + 40 * esc + tl + 18 * esc + i * tt * 1.12, l, "Tit", C["blanco"], an=8, tam=int(tt), spacing=-0.03 * tt, entra=(0, 40 * esc)))
 
     for ci in plan.get("cifras", []):
         if not (ci.get("fuente") and ci.get("verificada")):
@@ -820,6 +848,16 @@ def ass_graficos(plan, formato, ruta):
         ch = tl + tv * 1.1 + tf + 100 * esc
         x = cxs - cw / 2 if es_vertical(formato) else (sx if ci.get("lado") == "izq" else sw_right - cw)
         y = sy_top + 24 * esc if es_vertical(formato) else (h * ci["y_frac"] if "y_frac" in ci else sy_top + 30 * esc)
+        if es_vertical(formato):
+            if "y_frac" in ci:
+                y = h * ci["y_frac"]
+            if ci.get("lado") == "izq":
+                x = sx
+            elif ci.get("lado") == "der":
+                x = sw_right - cw
+        if ci.get("modo") == "pantalla":
+            _pantalla(ev, t0, t1, w, h, C)
+            x, y = cxs - cw / 2, (h - ch) / 2
         ev.append(_forma(0, t0, t1, x, y, cw, ch, 22 * esc, C["tarjeta"], borde=col, bord=max(2, int(3 * esc)), entra=(0, 40 * esc)))
         ev.append(_texto(2, t0, t1, x + cw / 2, y + 36 * esc, ci.get("etiqueta", "").upper(), "Mono", col, an=8, tam=int(tl), spacing=0.32 * tl, entra=(0, 40 * esc)))
         ev.append(_texto(2, t0, t1, x + cw / 2, y + 36 * esc + tl + 10 * esc, ci["valor"], "Tit", col, an=8, tam=int(tv), spacing=-0.03 * tv, entra=(0, 40 * esc)))
@@ -830,7 +868,12 @@ def ass_graficos(plan, formato, ruta):
     Pz = {"w": w, "h": h, "cx": cxs, "zw": sw_right - sx, "y_top": (sy_top + 20 * esc) if es_vertical(formato) else None, "y_bot": sy_bot}
     for tg in plan.get("titulos_grandes", []):
         Pz["y_top"] = (sy_top + 20 * esc) if es_vertical(formato) else h * tg.get("y", 0.14)
-        _titulo_grande(ev, tg, Pz, esc, C)
+        if es_vertical(formato) and "y" in tg:
+            Pz["y_top"] = h * tg["y"]
+        if tg.get("modo") == "pantalla":
+            _pantalla(ev, tg["t"], tg["t"] + tg.get("dur", 3.0), w, h, C)
+            Pz["y_top"] = h * 0.36
+        _titulo_grande(ev, tg, Pz, esc * float(tg.get("escala", 1.0)), C)
 
     # Modo impacto: palabra gigante a todo el ancho seguro, ≤ 1,2 s
     Pz["y_top"] = sy_top
@@ -841,6 +884,11 @@ def ass_graficos(plan, formato, ruta):
     for cta in plan.get("cta", []):
         t0, t1 = cta["t"], cta["t"] + cta.get("dur", 4.0)
         yb = (sy_top + 20 * esc) if es_vertical(formato) else h * cta.get("y", 0.30)
+        if es_vertical(formato) and "y" in cta:
+            yb = h * cta["y"]
+        if cta.get("modo") == "pantalla":
+            _pantalla(ev, t0, t1, w, h, C)
+            yb = h * 0.34
         kc = float(cta.get("escala", 1.0))
         tv, tp, te = 62 * esc * kc, 140 * esc * kc, 36 * esc * kc
         ev.append(_texto(2, t0, t1, cxs, yb, cta.get("verbo", "Comenta"), "Fino", C["blanco"], an=8, tam=int(tv), spacing=-0.02 * tv, entra=(0, 30 * esc), sombra=True, fade=True))

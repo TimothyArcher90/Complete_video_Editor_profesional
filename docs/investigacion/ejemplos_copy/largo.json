@@ -1,0 +1,88 @@
+{
+ "meta": {
+  "pieza": "EJEMPLO LARGO - Un negocio en un fin de semana con IA",
+  "tipo": "largo",
+  "tema": "Proceso completo de montar un producto con IA",
+  "invitado": "[PENDIENTE: nombre del orador]",
+  "idioma": "es-CO",
+  "duracion_s": 1080,
+  "no_publicar": true,
+  "nota": "Ejemplo de formato sobre material de terceros (clip de Aztec Lab). NO PUBLICAR. Los capitulos y la duracion de 18 min son HIPOTETICOS: el clip real dura 70 s."
+ },
+ "cifras": [],
+ "plataformas": {
+  "youtube_largo": {
+   "titulo": "Un negocio en un fin de semana con IA, sin código",
+   "hook": "Hace un año no habría podido ensamblar esto en un fin de semana. Esta es la secuencia completa, paso a paso.",
+   "cuerpo": "Producto físico, software, proveedores y tienda web con pagos e inventario, todo con ayuda de ChatGPT, Codex y Claude.\n\nVerás qué le pidió a cada herramienta y por qué ningún prompt necesitó lenguaje técnico.",
+   "cta": "Cuéntanos en comentarios qué proyecto tienes parado y qué te frena.",
+   "hashtags": [
+    "#InteligenciaArtificial",
+    "#Emprendimiento",
+    "#ChatGPT"
+   ],
+   "capitulos": [
+    {
+     "t": "00:00",
+     "titulo": "Intro: lo que verás"
+    },
+    {
+     "t": "01:30",
+     "titulo": "El producto: una caja que no existía"
+    },
+    {
+     "t": "04:10",
+     "titulo": "Proveedores y proceso comercial"
+    },
+    {
+     "t": "07:20",
+     "titulo": "Software y tienda web con pagos"
+    },
+    {
+     "t": "11:00",
+     "titulo": "Los planos 3D que generó ChatGPT"
+    },
+    {
+     "t": "14:30",
+     "titulo": "Los prompts: lenguaje natural"
+    },
+    {
+     "t": "17:00",
+     "titulo": "Cierre: pierde el miedo"
+    }
+   ],
+   "texto_pantalla": [
+    "Hace 1 año: imposible"
+   ],
+   "texto_portada": "Sin código, en 2 días",
+   "enlaces": [
+    {
+     "etiqueta": "Newsletter",
+     "url": "[PENDIENTE: URL newsletter]"
+    }
+   ],
+   "disclaimer": "Contenido educativo. No es asesoría de inversión."
+  },
+  "linkedin": {
+   "formato": "video",
+   "titulo": "",
+   "hook": "Un producto, su software y su tienda web con pagos, en un fin de semana. Sin escribir un prompt técnico.",
+   "cuerpo": "Dejamos la conversación completa en YouTube: 7 capítulos, del producto a la tienda web.\n\nLo útil para quien dirige un equipo: la IA recortó el proceso comercial y el desarrollo, pero la decisión de qué construir siguió siendo humana.",
+   "cta": "¿Qué parte de tu proceso comercial automatizarías primero?",
+   "hashtags": [
+    "#InteligenciaArtificial",
+    "#Emprendimiento",
+    "#Productividad"
+   ],
+   "texto_pantalla": [],
+   "texto_portada": "Sin código, en 2 días",
+   "enlaces": [
+    {
+     "etiqueta": "Video completo",
+     "url": "[PENDIENTE: URL YouTube]"
+    }
+   ],
+   "disclaimer": "Contenido educativo. No es asesoría de inversión."
+  }
+ }
+}

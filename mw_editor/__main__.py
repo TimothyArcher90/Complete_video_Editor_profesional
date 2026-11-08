@@ -109,9 +109,23 @@ def _capas(base, pf, plan, fm, nombre, n, exp, C, preview=False, estilo="visual"
     srt = exp / f"{nombre}_v{n}_subtitulos.srt"
     su.srt_frases(pf, srt)
     log(f"{fm}: {gs} grupos de subtítulo dinámico + SRT editable")
-    if fm == "horizontal" and any(plan.get(k) for k in ("titulos_grandes", "cifras", "cta")):
-        from .evitar_cara import ajustar as _evitar
-        plan, _av = _evitar(str(base), plan, fm)
+    # Revisor de capas (2026-11-08): mide con YuNet el solape cara-capa en cada instante (gráficos, clips, subtítulos), reubica / acorta / pasa a
+    # panel opaco lo que tape la cara y, si algo sigue encima, DETIENE el render con los instantes culpables (puerta dura). Sustituye a evitar_cara.
+    if os.environ.get("MW_SIN_REVISOR") != "1" and any(plan.get(k) for k in ("lower_thirds", "titulos", "cifras", "titulos_grandes", "cta", "clips")):
+        import copy as _cp
+        from . import revisor_capas as rc
+        plan = _cp.deepcopy(plan)
+        ass_rc = exp / f"{nombre}_{fm}_v{n}_graficos.ass"
+        plan, inf_rc = rc.revisar_y_corregir(str(base), plan, fm, str(ass_rc), str(ass_s), docs=C["00_DOCS"], etiqueta=f"_v{n}")
+        (C["00_DOCS"] / f"plan_grafico_{fm}_v{n}_corregido.json").write_text(json.dumps(plan, ensure_ascii=False, indent=1), encoding="utf-8")
+        try:
+            from . import verificar_encuadre as _ve
+            _caras, _ = _ve.caras_en(str(base), 4.0)
+            rc.hoja_visual(str(base), fm, str(ass_rc) if ass_rc.exists() else None, str(ass_s), _caras, rc.instantes_de_plan(plan, dur), C["04_GRAPHICS"] / f"revision_capas_{fm}_v{n}.png")
+        except Exception as e:  # noqa: BLE001  (la hoja es ayuda visual; no frena el render)
+            log("AVISO: hoja de revisión de capas no generada:", str(e)[:120])
+        log(f"{fm}: revisor de capas {inf_rc['estado']} · acciones {len(inf_rc['acciones'])} · solape subtítulos: sin solape {inf_rc['despues']['subtitulos'].get('sin_solape_pct')}%")
+        rc.puerta(inf_rc)
     if dur > 600 and not os.environ.get("MW_FORZAR_ALFA"):
         # Largo (>10 min): un ProRes 4444 de todo el video tardaria horas y pesaria varios GB. El master editable es SRT + ASS
         # (pista de subtitulos); el *_base.mp4 ya es el entregable. MW_FORZAR_ALFA=1 fuerza el ProRes completo.

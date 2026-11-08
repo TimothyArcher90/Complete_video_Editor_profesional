@@ -214,7 +214,14 @@ def _manifiesto_ia(proj):
     }
 
 
-def exportar(proj, plataformas=None, rapido=True, quemar_largos=False, titulo=None, tema="lima", etiqueta="MACROWISE", estilo="visual", cta="", idioma="auto", tipo=None):
+def exportar(proj, *args, **kw):
+    """Genera 07_PUBLICAR\\<plataforma>\\ (ver _exportar). Con candado por proyecto: dos exportaciones a la vez rompían el .mov (moov atom not found)."""
+    from .gates import candado
+    with candado(Path(proj).resolve()):
+        return _exportar(proj, *args, **kw)
+
+
+def _exportar(proj, plataformas=None, rapido=True, quemar_largos=False, titulo=None, tema="lima", etiqueta="MACROWISE", estilo="visual", cta="", idioma="auto", tipo=None):
     """Genera 07_PUBLICAR\\<plataforma>\\ para el proyecto. Devuelve la lista de fichas escritas."""
     proj = Path(proj).resolve()
     exp = proj / "06_EXPORT"

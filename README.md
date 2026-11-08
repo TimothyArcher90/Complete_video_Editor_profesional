@@ -1,32 +1,5 @@
-# Complete Video Editor Profesional
+# MacroWise Video Editor
 
-Motor de edición automática de video para contenido financiero/macro en español: de **un video de una persona** a **reel 9:16 + miniatura + copy** y **largo 16:9 + miniatura + copy** para TikTok, Instagram Reels, YouTube Shorts, YouTube y LinkedIn. Línea gráfica MacroWise (Warm Black, Geist, sin neón ni degradados, tarjetas opacas).
-
-```bash
-pip install -r requirements.txt
-python -m mw_editor editar VIDEO.mp4 --formato ambos --estilo visual
-python -m mw_editor produce VIDEO.mp4        # largo + capítulos + reels + miniaturas + fichas de publicación
-python -m mw_editor miniatura VIDEO.mp4
-python -m mw_editor qc  CARPETA_PROYECTO     # puntuación 0-100
-```
-Subcomandos: `proyecto, editar, componer, miniatura, lote, entrada, qc, produce, clips, exportar, sync`.
-
-## Principios
-- Orden de calidad: **denoise → exposición/color → estabilizar solo si tiembla → upscale solo si está blando → nitidez suave al final → un solo encode** (`libx264 -crf 17 -preset slow`).
-- `01_RAW` intocable; versiones v1, v2, v3.
-- Subtítulos siempre como **pista editable** (SRT/ASS/ProRes 4444 alfa); solo la variante de publicación los lleva quemados.
-- Cifra rotulada = afirmación de marca: el motor la rechaza sin `fuente` + `verificada: true`.
-- Zonas seguras por plataforma (`zonas.py`, perfil `universal`); ninguna cifra es oficial, cada una declara su confianza.
-- Qué NO se arregla en post: altas luces quemadas y bitrate de origen bajo. El motor lo dice.
-
-## Documentación
-`docs/WORKFLOW_AGENTICO.md` · `docs/GUIA_MINIATURAS.md` · `docs/RECETAS_REELS.md` · `docs/investigacion/` (zonas, métricas, color, copy, referencias; `referencias_largo.md` = preset de largo horizontal) · `skill/SKILL.md` (skill de Claude Code).
-
-## Licencias
-Ver `NOTICE.md`. Sin licencia de código declarada: todos los derechos reservados hasta que el titular decida.
-
----
-# Referencia detallada (original)
 Edición automática de reels y vídeos, vertical (9:16) y horizontal (16:9), con la línea gráfica MacroWise.
 
 ## Uso sin terminal

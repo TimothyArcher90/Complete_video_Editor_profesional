@@ -6,6 +6,7 @@
 El master NUNCA se modifica. Nada se publica ni se envía."""
 import argparse
 import json
+import os
 import re
 import shutil
 import time
@@ -105,6 +106,12 @@ def produce(master, raiz=None, brief_path=None, nombre=None, n_reels=5, min_clip
     if not raw.exists():
         shutil.copy2(master, raw)                     # el master queda intacto; 01_RAW tiene la copia
     info = probe(str(raw))
+    from . import gates as gt
+    pf = gt.preflight(proj, dur_min=info["duracion"] / 60)         # puerta 1: espacio/herramientas (lección E: llena = MP4 sin moov)
+    if any(p["estado"] == "FAIL" for p in pf) and not os.environ.get("MW_FORZAR"):
+        raise SystemExit("PUERTA DE ESPACIO/HERRAMIENTAS: " + "; ".join(f"{p['puerta']}: {p['detalle']}" for p in pf if p["estado"] == "FAIL")
+                         + " — libera espacio o usa otra --raiz (MW_FORZAR=1 para saltarla)")
+    gt.sellar_raw(proj)                                              # puerta 2: 01_RAW intocable, se verifica al final
     log(f"produce: {master.name} ({info['duracion'] / 60:.1f} min) -> {proj}")
     manifiesto = {"master": str(master), "proyecto_largo": str(proj), "brief": brief, "plataformas_corto": corto, "plataformas_largo": largo,
                   "reels": [], "avisos": [], "tiempos_s": T}
@@ -178,6 +185,10 @@ def produce(master, raiz=None, brief_path=None, nombre=None, n_reels=5, min_clip
     elif not palabras and not sin_reels:
         manifiesto["avisos"].append("sin transcripción (¿sin audio?): no se pueden elegir reels")
     T["total_s"] = round(time.time() - t_ini, 1)
+    raw_ok = gt.verificar_raw(proj)
+    manifiesto["puertas"] = {"raw": raw_ok["estado"]}
+    if raw_ok["estado"] == "FAIL":
+        manifiesto["avisos"].append("01_RAW CAMBIÓ durante la producción: " + raw_ok["detalle"])
     (proj / "00_DOCS" / "produccion.json").write_text(json.dumps(manifiesto, ensure_ascii=False, indent=1), encoding="utf-8")
     _siguiente_paso(proj, nombre, brief, manifiesto, palabras)
     log(f"PRODUCCIÓN LISTA en {T['total_s'] / 60:.1f} min -> {proj}")

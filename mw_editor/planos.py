@@ -162,12 +162,12 @@ def _stats_cara(caras, a, b, src_w, src_h):
     return cx, top, bot, eye
 
 
-def _encuadre_cara(stats, src_h, cw0, ch0, z0, zoom_alt, sub_top):
+def _encuadre_cara(stats, src_h, cw0, ch0, z0, zoom_alt, sub_top, horizontal=False):
     """Elige (z, y0, relleno_px, e, encogido) para una toma (encogido = None o {k, yf}). y0 puede pasar del borde inferior del origen (entonces hay relleno).
     e = posición final de los ojos como fracción del alto de salida."""
     cx, top, bot, eye = stats
     hf = bot - top
-    zmax = min(ZOOM_MAX, max(z0, zoom_alt) + 0.10)
+    zmax = min(ZOOM_MAX, max(z0, zoom_alt) + (0.30 if horizontal else 0.10))   # horizontal: más recorrido para subir los ojos a 30-38 % sin relleno
     ideal = sum(OJOS_OBJ) / 2
     best_t2 = None
     z = z0
@@ -191,6 +191,13 @@ def _encuadre_cara(stats, src_h, cw0, ch0, z0, zoom_alt, sub_top):
         z = round(z + 0.02, 4)
     if best_t2 is not None:
         return best_t2
+    if horizontal:
+        # largo horizontal: nada de relleno desenfocado ni video encogido (se ve como error en 16:9). Mejor esfuerzo dentro del origen:
+        # el mayor zoom permitido, ojos lo más cerca posible de la banda 30-38 % sin salirse del fotograma. Si aun así no cabe, queda
+        # reflejado en verificar_encuadre / M16d como WARN (límite del material: la cara está demasiado arriba o abajo del origen).
+        ch = ch0 / zmax
+        y0 = min(max(eye - ideal * ch, 0.0), max(0.0, src_h - ch))
+        return zmax, y0, 0.0, (eye - y0) / ch, None
     # nivel 3: relleno inferior (el recorte baja más allá del origen) o, si la cara es tan grande que no cabe, reducir el video
     ch = ch0 / z0
     e_min = (eye - top + PELO * hf) / ch + 0.01
@@ -227,7 +234,10 @@ def recortes(tomas_lista, caras, src_w, src_h, out_w, out_h, zoom_alt=1.12, titu
     cw0 = min(src_w, src_h * ta)
     ch0 = cw0 / ta
     formato = formato or _formato_de(out_w, out_h)
-    con_subs = formato is not None and zonas.es_vertical(formato) and os.environ.get("MW_ENCUADRE") != "clasico"   # clasico = encuadre antiguo (A/B)
+    # 2026-11-08: el horizontal (largos) usaba el encuadre «cara a ~42 % de altura» con un recorte casi fijo: sin aire real sobre la cabeza y
+    # sin garantía de ojos 30-38 %. Ahora comparte el encuadre por cara (ojos 30-38 %, cabeza con pelo entera, barbilla sobre los subtítulos).
+    horizontal = formato == "horizontal"
+    con_subs = formato is not None and (zonas.es_vertical(formato) or horizontal) and os.environ.get("MW_ENCUADRE") != "clasico"   # clasico = encuadre antiguo (A/B)
     sub_top = tope_subtitulos(formato, out_w, out_h) if con_subs else None
     res = []
     for i, (a, b) in enumerate(tomas_lista):
@@ -236,7 +246,7 @@ def recortes(tomas_lista, caras, src_w, src_h, out_w, out_h, zoom_alt=1.12, titu
         cx = st[0] if st else src_w / 2
         pad, encogido = 0.0, None
         if st and con_subs:
-            z, y, pad, _, encogido = _encuadre_cara(st, src_h, cw0, ch0, z, zoom_alt, sub_top)
+            z, y, pad, _, encogido = _encuadre_cara(st, src_h, cw0, ch0, z, zoom_alt, sub_top, horizontal)
             cw, ch = cw0 / z, ch0 / z
             x = min(max(cx - cw / 2, 0), src_w - cw)
         else:
