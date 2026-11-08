@@ -176,7 +176,8 @@ def _intermedio(proj, fm, n, base, quemar, tmp):
     graf = next(iter(sorted(exp.glob(f"*_{fm}_v{n}_graficos_ALFA.mov"))), None)
     plan_p = next((p for p in (Path(proj) / "05_PROJECT" / "plan.json", Path(proj) / "05_PROJECT" / "plan_auto.json") if p.exists()), None)
     plan = json.loads(plan_p.read_text(encoding="utf-8-sig")) if plan_p else {}
-    hay_capas = bool(graf) or bool(plan.get("paneles")) or bool(plan.get("clips"))
+    gass = next(iter(sorted(exp.glob(f"*_{fm}_v{n}_graficos.ass"))), None) if not graf else None
+    hay_capas = bool(graf) or bool(gass) or bool(plan.get("paneles")) or bool(plan.get("clips"))
     if not quemar and not hay_capas:
         return base, False
     if quemar and not ass:
@@ -186,7 +187,7 @@ def _intermedio(proj, fm, n, base, quemar, tmp):
             return base, False
     out = Path(tmp) / f"inter_{fm}_v{n}_{'subs' if quemar else 'capas'}.mp4"
     tmp.mkdir(parents=True, exist_ok=True)
-    co.referencia(str(base), dict(plan), fm, None, str(graf) if graf else None, None, str(out), tmp, preview_burned_ass=str(ass) if quemar else None)
+    co.referencia(str(base), dict(plan), fm, None, str(graf) if graf else None, None, str(out), tmp, preview_burned_ass=str(ass) if quemar else None, graficos_ass=str(gass) if gass else None)
     return out, quemar
 
 

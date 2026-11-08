@@ -802,14 +802,15 @@ def ass_graficos(plan, formato, ruta):
             continue
         t0, t1 = ci["t"], ci["t"] + ci.get("dur", 3.5)
         col = color_marca(ci.get("tipo", "valor"))
-        tv, tl, tf = 150 * esc, 26 * esc, 20 * esc
+        k = float(ci.get("escala", 1.0))
+        tv, tl, tf = 150 * esc * k, 26 * esc * k, 20 * esc * k
         wv = medir(ci["valor"], tv, "titular", -0.03 * tv)
         wl = medir(ci.get("etiqueta", "").upper(), tl, "mono", 0.18 * tl)
         wf = medir("FUENTE: " + ci["fuente"].upper(), tf, "mono", 0.18 * tf)
         cw = max(wv, wl, wf) + 90 * esc
         ch = tl + tv * 1.1 + tf + 100 * esc
-        x = cxs - cw / 2 if es_vertical(formato) else sw_right - cw
-        y = sy_top + 24 * esc if es_vertical(formato) else sy_top + 30 * esc
+        x = cxs - cw / 2 if es_vertical(formato) else (sx if ci.get("lado") == "izq" else sw_right - cw)
+        y = sy_top + 24 * esc if es_vertical(formato) else (h * ci["y_frac"] if "y_frac" in ci else sy_top + 30 * esc)
         ev.append(_forma(0, t0, t1, x, y, cw, ch, 22 * esc, C["tarjeta"], borde=col, bord=max(2, int(3 * esc)), entra=(0, 40 * esc)))
         ev.append(_texto(2, t0, t1, x + cw / 2, y + 36 * esc, ci.get("etiqueta", "").upper(), "Mono", col, an=8, tam=int(tl), spacing=0.18 * tl, entra=(0, 40 * esc)))
         ev.append(_texto(2, t0, t1, x + cw / 2, y + 36 * esc + tl + 10 * esc, ci["valor"], "Tit", col, an=8, tam=int(tv), spacing=-0.03 * tv, entra=(0, 40 * esc)))
@@ -830,8 +831,9 @@ def ass_graficos(plan, formato, ruta):
     # Cierre CTA: "Comenta" + palabra clave grande en lima
     for cta in plan.get("cta", []):
         t0, t1 = cta["t"], cta["t"] + cta.get("dur", 4.0)
-        yb = (sy_top + 20 * esc) if es_vertical(formato) else h * 0.30
-        tv, tp, te = 62 * esc, 140 * esc, 36 * esc
+        yb = (sy_top + 20 * esc) if es_vertical(formato) else h * cta.get("y", 0.30)
+        kc = float(cta.get("escala", 1.0))
+        tv, tp, te = 62 * esc * kc, 140 * esc * kc, 36 * esc * kc
         ev.append(_texto(2, t0, t1, cxs, yb, cta.get("verbo", "Comenta"), "Fino", C["blanco"], an=8, tam=int(tv), spacing=-0.02 * tv, entra=(0, 30 * esc), sombra=True, fade=True))
         ev.append(_texto(2, t0, t1, cxs, yb + tv * 1.2, "“" + cta["palabra"] + "”", "Tit", color_marca("lima"), an=8, tam=int(tp), spacing=-0.03 * tp, entra=(0, 30 * esc), sombra=True, fade=True))
         if cta.get("extra"):

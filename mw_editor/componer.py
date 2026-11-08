@@ -61,7 +61,7 @@ def _caja(nombre, formato):
     return cajas.get(nombre, cajas["panel"])
 
 
-def referencia(base, plan, formato, srt, graficos_mov, subs_mov, salida, carpeta_tmp, preview_burned_ass=None):
+def referencia(base, plan, formato, srt, graficos_mov, subs_mov, salida, carpeta_tmp, preview_burned_ass=None, graficos_ass=None):
     """MP4 de referencia: base + paneles en cápsula + clips + gráficos + (subs opcionales quemados SOLO en el preview)."""
     W, H = dims(formato)
     info = probe(base)
@@ -133,6 +133,9 @@ def referencia(base, plan, formato, srt, graficos_mov, subs_mov, salida, carpeta
         idx += 1
         f.append(f"{cur}[{g}:v]overlay=0:0:format=auto[gm]")
         cur = "[gm]"
+    if graficos_ass and Path(graficos_ass).exists():      # largos (>10 min) no generan ProRes alfa: las tarjetas se queman desde el ASS en la versión de entrega
+        f.append(f"{cur}ass=filename='{ffq(graficos_ass)}':fontsdir='{ffq(FONTS_DIR)}'[gass]")
+        cur = "[gass]"
     if preview_burned_ass:
         f.append(f"{cur}ass=filename='{ffq(preview_burned_ass)}':fontsdir='{ffq(FONTS_DIR)}'[vf]")
         cur = "[vf]"

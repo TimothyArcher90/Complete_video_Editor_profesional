@@ -77,7 +77,7 @@ def guardar(plan, ruta):
     Path(ruta).write_text(json.dumps(plan, indent=1, ensure_ascii=False), encoding="utf-8")
 
 
-def filtro_concat(keep, video=True, audio=True, afade=0.008):
+def filtro_concat(keep, video=True, audio=True, afade=0.030):
     """Script de filter_complex para concatenar los tramos (con micro-fundidos de audio de 8 ms anti-clic)."""
     partes, v_lab, a_lab = [], "", ""
     for i, (a, b) in enumerate(keep):

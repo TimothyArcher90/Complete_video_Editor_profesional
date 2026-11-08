@@ -109,6 +109,9 @@ def _capas(base, pf, plan, fm, nombre, n, exp, C, preview=False, estilo="visual"
     srt = exp / f"{nombre}_v{n}_subtitulos.srt"
     su.srt_frases(pf, srt)
     log(f"{fm}: {gs} grupos de subtítulo dinámico + SRT editable")
+    if fm == "horizontal" and any(plan.get(k) for k in ("titulos_grandes", "cifras", "cta")):
+        from .evitar_cara import ajustar as _evitar
+        plan, _av = _evitar(str(base), plan, fm)
     if dur > 600 and not os.environ.get("MW_FORZAR_ALFA"):
         # Largo (>10 min): un ProRes 4444 de todo el video tardaria horas y pesaria varios GB. El master editable es SRT + ASS
         # (pista de subtitulos); el *_base.mp4 ya es el entregable. MW_FORZAR_ALFA=1 fuerza el ProRes completo.
@@ -243,6 +246,10 @@ def main():
     c.add_argument("--preview", action="store_true")
     c.add_argument("--estilo", choices=["visual", "clasico", "karaoke-cajas", "minimo", "pildora"], default="visual")
     c.add_argument("--version", type=int, help="solo esta versión (v1, v2 ...)")
+    mu = sp.add_parser("musica", help="música automática como stem aparte (catálogo con licencia)")
+    mu.add_argument("proyecto")
+    mu.add_argument("--formato", default="horizontal")
+    mu.add_argument("--pista")
     rf = sp.add_parser("referencia", help="copia una referencia a REFERENCIAS, la mide y escribe el brand sheet borrador")
     rf.add_argument("video")
     rf.add_argument("--tipo", choices=["largo_horizontal", "reels_vertical", "miniaturas"], default="largo_horizontal")
@@ -254,6 +261,10 @@ def main():
     registrar(sp)
     a = ap.parse_args()
     if despachar(a):
+        return
+    if a.cmd == "musica":
+        from .musica import musicar
+        musicar(a.proyecto, a.formato, a.pista)
         return
     if a.cmd == "referencia":
         from .referencia import cmd_referencia
