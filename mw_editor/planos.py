@@ -246,7 +246,7 @@ def recortes(tomas_lista, caras, src_w, src_h, out_w, out_h, zoom_alt=1.12, titu
             if z == 1.0 and ch >= src_h - 1:
                 y = 0.0
             else:
-                y = min(max(cy - 0.40 * ch, 0), src_h - ch)  # la cara a ~40% de altura del encuadre
+                y = min(max(cy - 0.42 * ch, 0), src_h - ch)  # la cara a ~42% de altura (ojos ~36 %): aire sobre la cabeza
         item = [a, b, int(x) // 2 * 2, int(max(y, 0)) // 2 * 2, int(cw) // 2 * 2, int(ch) // 2 * 2]
         if encogido:
             item.append(dict(encogido))                      # {'k', 'yf'}: video a escala k con y desplazada yf (fracción del alto)

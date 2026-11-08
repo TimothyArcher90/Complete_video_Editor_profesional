@@ -93,7 +93,7 @@ def cmd_editar(a):
     for fm in formatos:
         W, H = dims(fm)
         tomas = pl.tomas(keep, palabras, objetivo=(6.0 if (W > H and a.toma == 3.6) else a.toma))   # largo horizontal: plano mediano 4,5-6 s (preset_largo)
-        rec = pl.recortes(tomas, caras, info["ancho"], info["alto"], W, H, zoom_alt=a.zoom)
+        rec = pl.recortes(tomas, caras, info["ancho"], info["alto"], W, H, zoom_alt=(1.06 if (W > H and a.zoom == 1.12) else a.zoom))   # largo horizontal: punch-in suave 1.06
         base = exp / f"{nombre}_{fm}_v{n}_base.mp4"
         rn.render_base(src, rec, str(wav), str(base), fm, pre, post, fps=round(info["fps"]) if info.get("fps") else None, mostrar_progreso=a.progreso, luz=0.0 if a.sin_luz else a.luz, pilar=(W > H and info["ancho"] < info["alto"]))
         salidas[fm] = base

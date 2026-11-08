@@ -68,8 +68,8 @@ def ajustar_al_beat(t, bts, tol=0.12):
 
 def mezclar(voz_wav, pista, salida, dur, db=DB_BAJO_VOZ, fade=3.0):
     """Música en bucle, ducking por sidechain con la voz, fades; devuelve SOLO la pista de música ya duckeada (stem aparte)."""
-    fg = (f"[0:a]aloop=loop=-1:size=2e9,atrim=0:{dur:.2f},volume={db}dB,afade=t=in:st=0:d={fade},afade=t=out:st={max(0, dur - fade):.2f}:d={fade}[m];"
-          f"[m][1:a]sidechaincompress=threshold=0.02:ratio=8:attack=50:release=700[d]")
+    fg = (f"[0:a]aloop=loop=-1:size=2e9,atrim=0:{dur:.2f},loudnorm=I=-24:TP=-3:LRA=7,volume={db + 20}dB,afade=t=in:st=0:d={fade},afade=t=out:st={max(0, dur - fade):.2f}:d={fade}[m];"
+          f"[m][1:a]sidechaincompress=threshold=0.04:ratio=4:attack=50:release=700:makeup=1[d]")
     cmd = [FFMPEG, "-hide_banner", "-y", "-v", "error", "-i", str(pista), "-i", str(voz_wav), "-filter_complex", fg, "-map", "[d]", "-ar", "48000", "-c:a", "pcm_s24le", str(salida)]
     subprocess.run(cmd, check=True, stdin=subprocess.DEVNULL)
     return salida
@@ -98,3 +98,13 @@ def musicar(proyecto, formato="horizontal", pista_id=None):
     (proyecto / "00_DOCS" / "musica_creditos.txt").write_text(cred, encoding="utf-8")
     log("música:", p["id"], f"({en}, {tempo:.0f} BPM) ->", out)
     return out
+
+
+def aplicar_musica(mp4_in, stem, mp4_out):
+    """Mezcla el stem de música (ya con ducking) con la voz del MP4 y re-normaliza a -14 LUFS / -1 dBTP; el video se copia sin recodificar.
+    Así la entrega final lleva la música dentro, y el stem queda aparte por si se quiere cambiar."""
+    fg = "[0:a][1:a]amix=inputs=2:duration=first:normalize=0,loudnorm=I=-14:TP=-1:LRA=11[a]"
+    cmd = [FFMPEG, "-hide_banner", "-y", "-v", "error", "-i", str(mp4_in), "-i", str(stem), "-filter_complex", fg,
+           "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(mp4_out)]
+    subprocess.run(cmd, check=True, stdin=subprocess.DEVNULL)
+    return mp4_out
