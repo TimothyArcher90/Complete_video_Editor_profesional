@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "GeistMW"; src: url("assets/fonts/Geist-SemiBold.ttf"); font-weight: 600; }
+      @font-face { font-family: "GeistMW"; src: url("assets/fonts/Geist-Regular.ttf"); font-weight: 400; }
+      @font-face { font-family: "GeistMonoMW"; src: url("assets/fonts/GeistMono-Bold.ttf"); font-weight: 700; }
+      :root { --fondo: #1a1a17; --tarjeta: #232320; --texto: #d6d1c8; --blanco: #ffffff; --oro: #c9a84c; --teal: #50b5a2; --borde: #4a4843; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--fondo); }
+      #root { position: relative; width: 1920px; height: 1080px; background: var(--fondo); font-family: "GeistMW", sans-serif; color: var(--blanco); }
+      #eyebrow { position: absolute; left: 150px; top: 130px; font-family: "GeistMonoMW"; font-weight: 700; font-size: 26px; letter-spacing: 0.32em; color: var(--oro); }
+      #titulo { position: absolute; left: 150px; top: 175px; width: 1600px; font-weight: 600; font-size: 74px; line-height: 1.08; letter-spacing: -0.03em; }
+      .bloque { position: absolute; top: 420px; width: 470px; height: 330px; background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .num { font-family: "GeistMonoMW"; font-weight: 700; font-size: 150px; letter-spacing: -0.04em; line-height: 1; }
+      .lbl { font-size: 34px; color: var(--texto); margin-top: 16px; text-align: center; }
+      .op { position: absolute; top: 520px; width: 140px; text-align: center; font-family: "GeistMonoMW"; font-weight: 700; font-size: 120px; color: var(--texto); }
+      #pie { position: absolute; left: 150px; top: 830px; width: 1620px; font-size: 36px; color: var(--texto); }
+      #pie b { color: var(--blanco); font-weight: 600; }
+      #fuente { position: absolute; left: 150px; top: 975px; font-family: "GeistMonoMW"; font-weight: 700; font-size: 22px; letter-spacing: 0.32em; color: var(--texto); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="25" data-width="1920" data-height="1080">
+      <div id="eyebrow" class="clip" data-start="0" data-duration="25" data-track-index="0">ARCA DIGITAL #39 · TIEMPO LIBRE</div>
+      <div id="titulo" class="clip" data-start="0" data-duration="25" data-track-index="0">Tu número de libertad</div>
+      <div id="bq1" class="bloque clip" style="left: 150px" data-start="0" data-duration="25" data-track-index="1">
+        <div class="num" style="color: var(--oro)">200</div><div class="lbl">salarios mensuales<br/>ahorrados</div>
+      </div>
+      <div id="op1" class="op clip" style="left: 640px" data-start="0" data-duration="25" data-track-index="1">×</div>
+      <div id="bq2" class="bloque clip" style="left: 790px" data-start="0" data-duration="25" data-track-index="1">
+        <div class="num" style="color: var(--teal)">6%</div><div class="lbl">de renta</div>
+      </div>
+      <div id="op2" class="op clip" style="left: 1280px" data-start="0" data-duration="25" data-track-index="1">=</div>
+      <div id="bq3" class="bloque clip" style="left: 1430px; width: 340px" data-start="0" data-duration="25" data-track-index="1">
+        <div class="num" style="color: var(--oro)">12</div><div class="lbl">salarios</div>
+      </div>
+      <div id="pie" class="clip" data-start="0" data-duration="25" data-track-index="1"><b>Un capital que te paga un salario por estar ocupado:</b> tu tiempo pasa a ser tuyo.</div>
+      <div id="fuente" class="clip" data-start="0" data-duration="25" data-track-index="0">EJEMPLO DEL AUTOR · EL ARCA DIGITAL #39</div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#eyebrow", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 0.2);
+      tl.fromTo("#titulo", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.4);
+      tl.fromTo("#fuente", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 1.0);
+      // lo dice a: 200 salarios (~1 s) · 6 % (~7,5 s) · 12 salarios (~9 s) · cierre (~20 s)
+      const pop = (id, t) => tl.fromTo(id, { opacity: 0, y: 30, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.6)" }, t);
+      pop("#bq1", 1.0);
+      tl.fromTo("#op1", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 7.0);
+      pop("#bq2", 7.2);
+      tl.fromTo("#op2", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 8.6);
+      pop("#bq3", 9.0);
+      tl.fromTo("#pie", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 14);
+      tl.set(["#op1", "#op2", "#bq1", "#bq2", "#bq3"], { opacity: 0 }, 0);
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "GeistMW"; src: url("assets/fonts/Geist-SemiBold.ttf"); font-weight: 600; }
+      @font-face { font-family: "GeistMW"; src: url("assets/fonts/Geist-Regular.ttf"); font-weight: 400; }
+      @font-face { font-family: "GeistMonoMW"; src: url("assets/fonts/GeistMono-Bold.ttf"); font-weight: 700; }
+      :root { --fondo: #1a1a17; --tarjeta: #232320; --texto: #d6d1c8; --blanco: #ffffff; --oro: #c9a84c; --teal: #50b5a2; --borde: #4a4843; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--fondo); }
+      #root { position: relative; width: 1920px; height: 1080px; background: var(--fondo); font-family: "GeistMW", sans-serif; color: var(--blanco); }
+      #eyebrow { position: absolute; left: 150px; top: 110px; font-family: "GeistMonoMW"; font-weight: 700; font-size: 26px; letter-spacing: 0.32em; color: var(--oro); }
+      #titulo { position: absolute; left: 150px; top: 155px; width: 1500px; font-weight: 600; font-size: 74px; line-height: 1.08; letter-spacing: -0.03em; }
+      #sub { position: absolute; left: 150px; top: 330px; font-size: 32px; color: var(--texto); }
+      .fila { position: absolute; left: 150px; width: 1620px; height: 118px; }
+      .etq { position: absolute; left: 0; top: 0; width: 520px; height: 118px; display: flex; flex-direction: column; justify-content: center; }
+      .etq b { font-weight: 600; font-size: 40px; letter-spacing: -0.02em; }
+      .etq span { font-size: 26px; color: var(--texto); margin-top: 4px; }
+      .pista { position: absolute; left: 540px; top: 24px; width: 940px; height: 70px; background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 14px; }
+      .barra { position: absolute; left: 0; top: 0; height: 66px; width: 0; border-radius: 12px; }
+      .val { position: absolute; left: 1500px; top: 0; height: 118px; display: flex; align-items: center; font-family: "GeistMonoMW"; font-weight: 700; font-size: 60px; }
+      .val small { font-family: "GeistMW"; font-weight: 400; font-size: 28px; margin-left: 12px; color: var(--texto); }
+      #marca7 { position: absolute; top: -8px; height: 82px; width: 6px; background: var(--teal); border-radius: 3px; opacity: 0; }
+      #lab7 { position: absolute; font-size: 28px; color: var(--teal); font-weight: 600; opacity: 0; white-space: nowrap; top: 106px; }
+      #fuente { position: absolute; left: 150px; top: 975px; font-family: "GeistMonoMW"; font-weight: 700; font-size: 22px; letter-spacing: 0.32em; color: var(--texto); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="87" data-width="1920" data-height="1080">
+      <div id="eyebrow" class="clip" data-start="0" data-duration="87" data-track-index="0">ARCA DIGITAL #39 · INVERTIR PARA QUÉ</div>
+      <div id="titulo" class="clip" data-start="0" data-duration="87" data-track-index="0">¿Cuánto tarda cada camino en darte libertad financiera?</div>
+      <div id="sub" class="clip" data-start="0" data-duration="87" data-track-index="0">Años estimados con hábito de ahorro consistente</div>
+
+      <div id="f1" class="fila clip" style="top: 410px" data-start="0" data-duration="87" data-track-index="1">
+        <div class="etq"><b>CDT</b><span>Seguridad ante todo</span></div>
+        <div class="pista"><div class="barra" id="b1" style="background: #d6d1c8"></div></div>
+        <div class="val"><span id="n1">0</span><small>años</small></div>
+      </div>
+      <div id="f2" class="fila clip" style="top: 545px" data-start="0" data-duration="87" data-track-index="1">
+        <div class="etq"><b>Inmuebles</b><span>Preserva el capital</span></div>
+        <div class="pista"><div class="barra" id="b2" style="background: #d6d1c8"></div></div>
+        <div class="val"><span id="n2">0</span><small>años</small></div>
+      </div>
+      <div id="f3" class="fila clip" style="top: 680px" data-start="0" data-duration="87" data-track-index="1">
+        <div class="etq"><b>Índice de 500 compañías</b><span>Acciones globales</span></div>
+        <div class="pista"><div class="barra" id="b3" style="background: #d6d1c8"></div></div>
+        <div class="val"><span id="n3">0</span><small>años</small></div>
+      </div>
+      <div id="f4" class="fila clip" style="top: 815px" data-start="0" data-duration="87" data-track-index="1">
+        <div class="etq"><b style="color: var(--oro)">Convergencia tecnológica</b><span>Entender el cambio estructural</span></div>
+        <div class="pista"><div class="barra" id="b4" style="background: #c9a84c"></div><div id="marca7"></div></div>
+        <div class="val" style="color: var(--oro)"><span id="n4">0</span><small>años</small></div>
+        <div id="lab7">7 años si eres más intenso</div>
+      </div>
+      <div id="fuente" class="clip" data-start="0" data-duration="87" data-track-index="0">ESTIMACIONES DEL AUTOR · EL ARCA DIGITAL #39</div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const MAX = 38, W = 936;
+      const w = (a) => (a / MAX) * W;
+      tl.fromTo("#eyebrow", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 0.2);
+      tl.fromTo("#titulo", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.4);
+      tl.fromTo("#sub", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" }, 1.0);
+      tl.fromTo("#fuente", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 1.2);
+      ["f1", "f2", "f3", "f4"].forEach((f) => tl.set("#" + f, { opacity: 0 }, 0));
+      const fila = (id, anios, t0) => {
+        tl.fromTo("#f" + id, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, t0 - 0.4);
+        tl.fromTo("#b" + id, { width: 0 }, { width: w(anios), duration: 1.6, ease: "power3.out" }, t0);
+        const o = { v: 0 };
+        tl.fromTo(o, { v: 0 }, { v: anios, duration: 1.6, ease: "power3.out", onUpdate: () => { document.getElementById("n" + id).textContent = Math.round(o.v); } }, t0);
+      };
+      fila(1, 38, 3.9);   // «CDT … 38 años» se dice a los 3,5 s del clip
+      fila(2, 28, 19.1);    // inmuebles, 28
+      fila(3, 22, 30.2);    // índice de 500 compañías, 22
+      fila(4, 10, 73.9);    // convergencia tecnológica, 10
+      tl.set("#marca7", { left: w(7) - 3 }, 0);
+      tl.fromTo("#marca7", { opacity: 0, scaleY: 0.2 }, { opacity: 1, scaleY: 1, duration: 0.4, ease: "back.out(2)" }, 79.1);
+      tl.set("#lab7", { left: 540 + w(7) - 20 }, 0);
+      tl.fromTo("#lab7", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4 }, 79.3);
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

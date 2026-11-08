@@ -11,7 +11,7 @@ from mw_editor.common import crear_proyecto, probe
 RAIZ_DIR = None
 
 LARGO = Path(r"E:\CARPETA OUTPUTS IA 2026\Video con Ia editor\outputs organizados\06-11-2026\Arca_14ene2026_editado")
-GR = LARGO / "04_GRAPHICS"
+GR = Path(r"C:\Users\tante\Videos\Arca_reels\_graficos")
 RAIZ = Path(r"C:\Users\tante\Videos\Arca_reels")
 raw_master = LARGO / "01_RAW" / "arca_14ene.mp4"
 palabras = json.loads((LARGO / "03_TRANSCRIPT" / "words.json").read_text(encoding="utf-8-sig"))
@@ -32,10 +32,9 @@ def primera(pf, pred, desde=0.0):
 
 def plan_a(pf, dur):
     t200 = primera(pf, lambda t: t == "200")
+    # vertical: sin títulos ni CTA superpuestos (la cara ocupa el cuadro); solo el panel de la ecuación
     return {
-        "titulos_grandes": [{"t": 0.6, "dur": 3.6, "linea1": "Antes de invertir", "linea2": "¿Invertir para qué?", "color": "lima", "caja": True}],
-        "paneles": [{"t": max(1.0, t200 - 1.0), "dur": min(25.0, dur - max(1.0, t200 - 1.0) - 6.0), "clip": str(GR / "ecuacion_200_salarios.mp4"), "caja": "panel"}],
-        "cta": [{"t": dur - 5.2, "dur": 4.6, "verbo": "Súmate al", "palabra": "Arca", "extra": "El Arca Digital · MacroWise"}],
+        "paneles": [{"t": max(1.0, t200 - 1.0), "dur": min(25.0, dur - max(1.0, t200 - 1.0) - 1.0), "clip": str(GR / "ecuacion_vertical.mp4"), "caja": "panel"}],
     }
 
 
@@ -43,8 +42,7 @@ def plan_b(pf, dur):
     t38 = primera(pf, lambda t: t == "38")
     t0 = max(0.3, t38 - 3.9)
     return {
-        "paneles": [{"t": t0, "dur": min(87.0, dur - t0 - 5.5), "clip": str(GR / "infografia_anos_libertad_financiera.mp4"), "caja": "panel"}],
-        "cta": [{"t": dur - 5.2, "dur": 4.6, "verbo": "Súmate al", "palabra": "Arca", "extra": "El Arca Digital · MacroWise"}],
+        "paneles": [{"t": t0, "dur": min(87.0, dur - t0 - 1.0), "clip": str(GR / "infografia_vertical.mp4"), "caja": "panel"}],
     }
 
 

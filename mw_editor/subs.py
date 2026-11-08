@@ -537,7 +537,10 @@ def estadisticas_agrupacion(palabras, formato, estilo="visual", tam=None):
 
 def ocultar_desde_plan(plan):
     """Intervalos (t0, t1) donde un 'impacto' ocupa la pantalla: se pasan como `ocultar=` para que el subtítulo no se pelee con la palabra gigante."""
-    return [(i["t"], i["t"] + min(float(i.get("dur", 1.0)), 1.2)) for i in (plan or {}).get("impacto", [])]
+    # + paneles/clips a pantalla (infografías, ecuaciones, mapas): ahí el subtítulo tapa el gráfico; la voz sigue y el SRT queda completo
+    ocultos = [(i["t"], i["t"] + min(float(i.get("dur", 1.0)), 1.2)) for i in (plan or {}).get("impacto", [])]
+    ocultos += [(p["t"], p["t"] + float(p.get("dur", 3.0))) for k in ("paneles", "clips") for p in (plan or {}).get(k, [])]
+    return ocultos
 
 
 # ---------- SRT editable (frases, no palabra a palabra) ----------
