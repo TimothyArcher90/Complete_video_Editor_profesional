@@ -8,3 +8,4 @@ _pruebas/
 *.mkv
 .env
 docs/investigacion/meta/
+brand/bin/

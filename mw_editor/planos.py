@@ -104,7 +104,7 @@ RELLENO_MAX = 0.30              # fracción máxima del recorte que puede ser re
 HUECO_SUBS = 0.03               # holgura (fracción del alto) entre la barbilla y el bloque de subtítulos (absorbe el ruido de YuNet, ~2 %)
 K_MIN = 0.70                    # escala mínima del video cuando la cara es enorme (por debajo, el fondo desenfocado domina)
 PELO = 0.35                     # la cabeza real sobresale ~35 % del alto de la caja de YuNet por encima de ella
-AIRE = 0.035                    # aire mínimo (fracción del alto de salida) entre el pelo y el borde superior: la cabeza NUNCA toca el borde
+AIRE = 0.06                     # aire mínimo (fracción del alto de salida) entre el pelo y el borde superior: la cabeza NUNCA toca el borde
 CARA_MAX = 0.32                 # la caja de la cara no ocupa más de ~32 % del alto de salida en vertical (~45 % del ancho: tope de gates.encuadre); más = «demasiado cerca» -> se reduce el video (k >= K_MIN)
 
 

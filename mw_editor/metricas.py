@@ -20,8 +20,8 @@ PUNTOS = {"PASS": 1.0, "WARN": 0.5, "FAIL": 0.0}
 
 # Perfiles de plataforma: duración (s) óptima / máxima, formato objetivo. Fuente: docs/investigacion/metricas.json (confianza terceros salvo indicación).
 PLATAFORMAS = {
-    "instagram_reels": {"optimo": (15, 35), "max": 180, "formatos": ("vertical",), "conf": "terceros", "nombre": "Instagram Reels"},
-    "tiktok": {"optimo": (20, 40), "max": 600, "formatos": ("vertical",), "conf": "terceros", "nombre": "TikTok"},
+    "instagram_reels": {"optimo": (15, 35), "max": 180, "max_verificado": False, "formatos": ("vertical",), "conf": "terceros", "nombre": "Instagram Reels"},
+    "tiktok": {"optimo": (20, 40), "max": 600, "max_verificado": False, "formatos": ("vertical",), "conf": "terceros", "nombre": "TikTok"},
     "youtube_shorts": {"optimo": (20, 50), "max": 180, "formatos": ("vertical",), "conf": "oficial", "nombre": "YouTube Shorts"},
     "linkedin": {"optimo": (30, 90), "max": 600, "formatos": ("cuadrado", "4x5", "horizontal", "vertical"), "conf": "terceros", "nombre": "LinkedIn"},
     "youtube_largo": {"optimo": (180, 1500), "max": 43200, "formatos": ("horizontal",), "conf": "terceros", "nombre": "YouTube largo"},

@@ -92,3 +92,17 @@ def procesar(src, wav_out, analisis, keep=None, extra_in=None):
         tmp.unlink(missing_ok=True)
         res["revertido"] = True
     return res
+
+
+def limpiar_voz(wav_in, carpeta_out):
+    """Limpieza de voz con DeepFilterNet (MIT/Apache-2.0, binario oficial v0.5.6 en brand/bin). Entrada: WAV mono 48 kHz de la VOZ SOLA (sin música). Devuelve la ruta del WAV limpio.
+    Medido en 20 s del Arca (con música de fondo): suelo de ruido −30,5 → −48,1 dB, voz sin cambio. Aplicar ANTES de mezclar la música; no sobre el MP4 final."""
+    import subprocess
+    from pathlib import Path
+    from .common import ROOT
+    exe = ROOT / "brand" / "bin" / "deep-filter.exe"
+    if not exe.exists():
+        raise FileNotFoundError(f"falta {exe}: descargar de github.com/Rikorose/DeepFilterNet/releases/tag/v0.5.6")
+    Path(carpeta_out).mkdir(parents=True, exist_ok=True)
+    subprocess.run([str(exe), "-o", str(carpeta_out), str(wav_in)], check=True, stdin=subprocess.DEVNULL, capture_output=True)
+    return Path(carpeta_out) / Path(wav_in).name
