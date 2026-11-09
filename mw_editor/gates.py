@@ -116,7 +116,7 @@ def audio(video):
     i, tp = _lufs(video)
     if i is None:
         return _r("sonoridad", "WARN", "no medible")
-    ok = abs(i + 14) <= 1.5 and tp <= -0.7
+    ok = abs(i + 14) <= 1.5 and tp <= -1.0
     return _r("sonoridad", "PASS" if ok else "FAIL", f"{i:.1f} LUFS · pico {tp:.1f} dBTP (objetivo −14 ±1,5 / ≤ −1)", lufs=i, true_peak=tp)
 
 
@@ -129,6 +129,33 @@ def colisiones(base, final, plan):
     med = [x for x in res if x.get("solape_cara") is not None]
     est = "FAIL" if mal else ("WARN" if (res and not med) else "PASS")      # sin capas en el plan = nada que tapar = PASS
     return _r("capas vs cara", est, f"{len(med)} capas medidas, {len(mal)} tapan la cara" + ("" if res else " (el plan no tiene capas)"), capas=res)
+
+
+# ---------- 4a. capa-vs-capa (2026-11-08 v4): título/subtítulo/tarjeta/lower third/zona segura. NO duplica colisiones() (capa-vs-CARA sobre el MP4):
+# lee lo que ya midió revisor_capas.medir_capas_entre_si y dejó en 00_DOCS/revision_capas_<formato>_vN.json ----------
+def capas_entre_si(proyecto):
+    docs = Path(proyecto) / "00_DOCS"
+    ult = {}
+    for f in sorted(docs.glob("revision_capas_*_v[0-9]*.json"), key=lambda p: p.stat().st_mtime):
+        fm = re.match(r"revision_capas_(\w+?)_v\d+", f.name)
+        if fm:
+            ult[fm.group(1)] = f
+    if not ult:
+        return _r("capas entre sí", "WARN", "no hay revision_capas_*.json (el revisor de capas no corrió)")
+    peor, det = "PASS", []
+    for fm, f in ult.items():
+        inf = json.loads(f.read_text(encoding="utf-8"))
+        ll = inf.get("capas_entre_si")
+        if not ll:
+            peor = "WARN" if peor == "PASS" else peor
+            det.append(f"{fm}: informe sin capa-vs-capa ({f.name})")
+            continue
+        est = ll.get("estado", "PASS")
+        if est == "FAIL" or (est == "WARN" and peor == "PASS"):
+            peor = est
+        d = ll["despues"]
+        det.append(f"{fm}: {est} · pares {list(d['pares']) or 'sin choques'} · fuera de zona segura {len(d['fuera_zona'])} tramos · cápsulas {len(inf.get('capsulas', []))} · omitidos {len(inf.get('omitidos', []))} · paneles {len(inf.get('panel_completo', []))}")
+    return _r("capas entre sí", peor, "; ".join(det))
 
 
 # ---------- 4b. encuadre y franja oscura (lección: cara enorme en reels, poco aire, franja negra abajo) ----------
@@ -205,7 +232,13 @@ def delta_color(original, editado, umbral=2.3):
     if a is None or b is None:
         return _r("color: cambio perceptible", "WARN", "no medible")
     d = float(np.linalg.norm(a - b))
-    return _r("color: cambio perceptible", "PASS" if d >= umbral else "WARN", f"ΔE76 medio {d:.1f} (apenas perceptible < {umbral}); L {a[0]:.0f}→{b[0]:.0f}", valor=round(d, 2))
+    try:
+        import colour
+        d00 = float(colour.delta_E(a, b, method="CIE 2000"))
+    except Exception:
+        d00 = None
+    extra = f" · ΔE2000 {d00:.1f} (JND ~1, ESTIMADO)" if d00 is not None else ""
+    return _r("color: cambio perceptible", "PASS" if d >= umbral else "WARN", f"ΔE76 medio {d:.1f} (apenas perceptible < {umbral}); L {a[0]:.0f}→{b[0]:.0f}{extra}", valor=round(d, 2), de2000=None if d00 is None else round(d00, 2))
 
 
 def contraste_wcag(fg_hex, bg_hex):
@@ -271,6 +304,74 @@ def entrega(proyecto, entregables, decisiones=(), fuera=(), hice=()):
     return texto
 
 
+def subtitulos(srt, cps_max=20.0, cps_duro=25.0, lineas_max=2, chars_linea=42):
+    """Legibilidad de la pista SRT. Evidencia académica: 12-20 caracteres/s (informe 2026-11-09_retencion_specs); ≤2 líneas y ≤42 caracteres por línea (convención de subtitulado, ESTIMADO).
+    PASS: ningún bloque > cps_duro y ≤5 % sobre cps_max. WARN: entre medias. FAIL: algún bloque ilegible (> cps_duro en >5 % de bloques)."""
+    txt = Path(srt).read_text(encoding="utf-8-sig", errors="replace")
+    bloques = re.findall(r"(\d+):(\d+):(\d+)[,.](\d+)\s*-->\s*(\d+):(\d+):(\d+)[,.](\d+)\s*\n(.*?)(?:\n\s*\n|\Z)", txt, re.S)
+    if not bloques:
+        return _r("subtítulos: legibilidad", "WARN", "SRT vacío o ilegible")
+    malos = duros = lineas = 0
+    peor = 0.0
+    for b in bloques:
+        t0 = int(b[0]) * 3600 + int(b[1]) * 60 + int(b[2]) + int(b[3].ljust(3, "0")[:3]) / 1000
+        t1 = int(b[4]) * 3600 + int(b[5]) * 60 + int(b[6]) + int(b[7].ljust(3, "0")[:3]) / 1000
+        ls = [l for l in b[8].strip().split("\n") if l.strip()]
+        cps = sum(len(l) for l in ls) / max(t1 - t0, 0.2)
+        peor = max(peor, cps)
+        malos += cps > cps_max
+        duros += cps > cps_duro
+        lineas += len(ls) > lineas_max or any(len(l) > chars_linea for l in ls)
+    n = len(bloques)
+    est = "FAIL" if duros / n > 0.05 else ("WARN" if malos / n > 0.05 or lineas else "PASS")
+    return _r("subtítulos: legibilidad", est, f"{n} bloques · peor {peor:.0f} car/s (objetivo ≤ {cps_max:.0f}) · {malos} sobre el objetivo · {lineas} con demasiadas líneas/caracteres", peor_cps=round(peor, 1))
+
+
+def vmaf(referencia, distorsionado, ok=90.0, aviso=80.0, hilos=4):
+    """VMAF (libvmaf de ffmpeg) del entregable contra la referencia. SOLO válido si ambos comparten la misma línea de tiempo (sin cortes distintos): sirve para medir el daño de un encode o de un paso de mejora, no para comparar origen vs. editado con cortes.
+    Umbrales ESTIMADOS: ≥ 90 transparente en la práctica, 80-90 degradación visible en detalle."""
+    import subprocess
+    fc = ("[0:v]settb=AVI_TB,setpts=PTS-STARTPTS,scale=1280:720:flags=bicubic[d];"
+          "[1:v]settb=AVI_TB,setpts=PTS-STARTPTS,scale=1280:720:flags=bicubic[r];"
+          f"[d][r]libvmaf=n_threads={hilos}")
+    r = subprocess.run([FFMPEG, "-hide_banner", "-i", str(distorsionado), "-i", str(referencia), "-lavfi", fc, "-f", "null", "-"],
+                       capture_output=True, text=True, stdin=subprocess.DEVNULL, errors="replace")
+    m = re.search(r"VMAF score:\s*([\d.]+)", r.stderr)
+    if not m:
+        return _r("vmaf", "WARN", "no se pudo medir (¿ffmpeg sin libvmaf?)")
+    v = float(m.group(1))
+    return _r("vmaf", "PASS" if v >= ok else ("WARN" if v >= aviso else "FAIL"), f"VMAF {v:.1f} (≥ {ok:.0f} transparente; umbrales ESTIMADOS)", valor=round(v, 2))
+
+
+def luces_quemadas(video, n=8, tope=0.02):
+    """Altas luces quemadas EN LA CARA: píxeles con los 3 canales ≥ 250 dentro de la caja de YuNet. > 2 % = FAIL: no se arregla en post, se declara.
+    Umbral del informe 2026-11-09_color (ESTIMADO). Sin cara detectada = WARN."""
+    import cv2
+    import numpy as np
+    from .qc import _png
+    from .common import probe
+    det = cv2.FaceDetectorYN.create(str(ROOT / "brand" / "models" / "face_detection_yunet_2023mar.onnx"), "", (640, 360), 0.7, 0.3, 5000)
+    dur = probe(str(video))["duracion"]
+    fr = []
+    for i in range(n):
+        img = _png(video, dur * (i + 0.5) / n)
+        if img is None:
+            continue
+        h, w = img.shape[:2]
+        det.setInputSize((w, h))
+        _, caras = det.detect(img)
+        if caras is None or not len(caras):
+            continue
+        x, y, bw, bh = [int(v) for v in caras[0][:4]]
+        roi = img[max(y, 0):y + bh, max(x, 0):x + bw]
+        if roi.size:
+            fr.append(float((roi.min(axis=2) >= 250).mean()))
+    if not fr:
+        return _r("luces quemadas en cara", "WARN", "sin cara detectada")
+    m = float(np.mean(fr))
+    return _r("luces quemadas en cara", "FAIL" if m > tope else ("WARN" if m > tope / 4 else "PASS"), f"{m * 100:.2f} % de la cara con los 3 canales ≥ 250 (FAIL > {tope * 100:.0f} %; no corregible en post)", valor=round(m, 4))
+
+
 def correr_todas(proyecto, destino, base=None, final=None, plan=None, pistas=()):
     """Bloque único para el final de cualquier video. Devuelve (estado_global, lista de puertas)."""
     P = list(preflight(destino))
@@ -279,6 +380,8 @@ def correr_todas(proyecto, destino, base=None, final=None, plan=None, pistas=())
         P.append(audio(final))
     if base and final and plan:
         P.append(colisiones(base, final, plan))
+    if (Path(proyecto) / "00_DOCS").exists() and any((Path(proyecto) / "00_DOCS").glob("revision_capas_*_v[0-9]*.json")):
+        P.append(capas_entre_si(proyecto))
     if pistas:
         P += licencias(pistas)[0]
     est = "FAIL" if any(p["estado"] == "FAIL" for p in P) else ("WARN" if any(p["estado"] == "WARN" for p in P) else "PASS")
@@ -298,6 +401,9 @@ def main(argv=None):
     sp.add_parser("paleta")
     a = sp.add_parser("licencias"); a.add_argument("--pistas", required=True)
     a = sp.add_parser("versiones"); a.add_argument("--proyecto", required=True)
+    a = sp.add_parser("subtitulos"); a.add_argument("--srt", required=True)
+    a = sp.add_parser("vmaf"); a.add_argument("--ref", required=True); a.add_argument("--dist", required=True)
+    a = sp.add_parser("quemadas"); a.add_argument("--video", required=True)
     n = ap.parse_args(argv)
     if n.cmd == "preflight":
         out = preflight(n.destino, n.min_gb, n.dur_min)
@@ -316,6 +422,12 @@ def main(argv=None):
     elif n.cmd == "licencias":
         out, cred = licencias(n.pistas.split(","))
         print(cred)
+    elif n.cmd == "subtitulos":
+        out = [subtitulos(n.srt)]
+    elif n.cmd == "vmaf":
+        out = [vmaf(n.ref, n.dist)]
+    elif n.cmd == "quemadas":
+        out = [luces_quemadas(n.video)]
     else:
         out = versiones_apiladas(n.proyecto)
     for x in out:

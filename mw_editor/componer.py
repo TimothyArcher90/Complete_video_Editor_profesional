@@ -148,6 +148,6 @@ def referencia(base, plan, formato, srt, graficos_mov, subs_mov, salida, carpeta
     cmd += ["-/filter_complex", script, "-map", "[vout]", "-map", "0:a"]
     if srt and not preview_burned_ass:
         cmd += ["-map", f"{idx}:0", "-c:s", "mov_text", "-metadata:s:s:0", "language=spa"]
-    cmd += ["-shortest", *BRAND["encode"]["x264"], "-c:a", "aac", "-b:a", "256k", "-movflags", "+faststart", salida]
+    cmd += ["-shortest", *BRAND["encode"]["x264"], "-c:a", "aac", "-b:a", "256k", "-ac", "2", "-ar", "48000", "-movflags", "+faststart", salida]
     run(cmd)
     return salida

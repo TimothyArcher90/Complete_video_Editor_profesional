@@ -28,6 +28,8 @@ def revisar(base, final, plan):
     paneles = [(p["t"], p["t"] + p.get("dur", 3)) for p in plan.get("paneles", [])]
     res = []
     for k, x in items:
+        if x.get("modo") in ("pantalla", "omitir"):      # panel opaco a pantalla completa (oculta al presentador a propósito) u omitido por revisor_capas
+            continue
         t = x["t"] + min(1.2, x.get("dur", 3.0) * 0.5)
         if any(a <= t <= b for a, b in paneles):
             continue

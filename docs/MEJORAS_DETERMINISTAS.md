@@ -43,3 +43,13 @@ python -m mw_editor.gates colisiones --base base.mp4 --final final.mp4 --plan pl
 python -m mw_editor.gates licencias --pistas windswept,easy_lemon
 python -m mw_editor.gates versiones --proyecto P         # propuesta, no borra
 ```
+
+## Añadido 2026-11-09 (investigación en 4 frentes: `docs/investigacion/2026-11-09_*.md`)
+| Puerta | Qué mide | Estado |
+|---|---|---|
+| `gates.audio` | Pico ahora ≤ −1,0 dBTP (antes aceptaba −0,7 aunque el texto decía −1). El largo entregado fallaba (−0,86): se creó `..._con_musica_v2.mp4` con pico −1,2 | ✅ |
+| `gates.subtitulos` | Caracteres/s (objetivo ≤ 20), ≤ 2 líneas, ≤ 42 car/línea. Reel `anos_libertad`: pico 26 car/s = WARN | ✅ |
+| `gates.vmaf` | VMAF con libvmaf de ffmpeg; solo con la misma línea de tiempo (daño de encode/mejora) | 🔧 sin probar con par real |
+| `gates.luces_quemadas` | % de cara con 3 canales ≥ 250; > 2 % = FAIL (no corregible en post) | ✅ largo: 0 % |
+| `gates.delta_color` | Añade ΔE2000 al ΔE76 (JND de ΔE2000 ~1 = ESTIMADO) | ✅ |
+Pendiente por orden de impacto: reencuadre con MediaPipe Face Landmarker + One-Euro (aire hoy 3,5 % vs 8–15 %), DeepFilterNet para voz (binario), máscara de piel SelfieMulticlass, tabla `PLATAFORMAS` (Reels 180 s y TikTok 600 s sin verificar). Licencias: whisper-timestamped AGPL, RVM/color-matcher GPL, InsightFace y NISQA no comerciales = fuera.

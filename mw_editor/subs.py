@@ -769,7 +769,7 @@ def _pantalla(ev, t0, t1, w, h, C):
               f"{{\\an7\\pos(0,0)\\1c{ass_c(C['fondo'])}\\bord0\\shad0\\fad(120,120)\\p1}}{rrect(w, h, 0)}{{\\p0}}\n")
 
 
-def ass_graficos(plan, formato, ruta):
+def ass_graficos(plan, formato, ruta, sin_panel=False):
     """lower_thirds, titulos, cifras, titulos_grandes, impacto, cta -> un ASS. Las cifras exigen 'fuente' y 'verificada': si no, se rechazan (regla de marca)."""
     w, h = dims(formato)
     seg = zona_seg(formato)
@@ -780,9 +780,23 @@ def ass_graficos(plan, formato, ruta):
     esc = h / 1080 if formato == "horizontal" else w / 1080  # escala relativa a 1080 de lado corto
     ev = [_cabecera(w, h, _estilos_tarjetas())]
     avisos = []
+    _pant = (lambda *a, **k: None) if sin_panel else _pantalla   # sin_panel: el revisor mide las tarjetas SIN el panel opaco de fondo
 
     for lt in plan.get("lower_thirds", []):
         t0, t1 = lt["t"], lt["t"] + lt.get("dur", 4.0)
+        if lt.get("modo") == "omitir":              # revisor_capas: no cabe ni como cápsula sin tapar la cara -> no se dibuja (queda en el informe)
+            continue
+        if lt.get("modo") == "capsula":             # CÁPSULA: píldora pequeña opaca Warm Black con solo el nombre, en la banda libre más baja
+            kc = float(lt.get("escala", 1.0))
+            tc = 42 * esc * kc
+            wc = medir(lt["nombre"], tc, "titular", -0.03 * tc)
+            pc = 16 * esc * kc
+            cwc, chc = wc + pc * 2, tc * 1.18 + pc * 0.9
+            xc = {"izq": sx, "der": sw_right - cwc}.get(lt.get("lado"), cxs - cwc / 2)
+            yc = h * lt.get("y_frac", 0.80)
+            ev.append(_forma(0, t0, t1, xc, yc, cwc, chc, chc / 2, C["fondo"], borde=C["oro"], bord=max(2, int(2 * esc)), entra=(0, 24 * esc)))
+            ev.append(_texto(2, t0, t1, xc + pc, yc + pc * 0.45, lt["nombre"], "Tit", C["blanco"], tam=int(tc), spacing=-0.03 * tc, entra=(0, 24 * esc)))
+            continue
         klt = float(lt.get("escala", 1.0))
         tn, tr = 50 * esc * klt, 24 * esc * klt
         wn = medir(lt["nombre"], tn, "titular", -0.03 * tn)
@@ -799,7 +813,7 @@ def ass_graficos(plan, formato, ruta):
         if "y_frac" in lt:                       # reubicado por revisor_capas (nunca sobre la cara)
             y = h * lt["y_frac"]
         if lt.get("modo") == "pantalla":
-            _pantalla(ev, t0, t1, w, h, C)
+            _pant(ev, t0, t1, w, h, C)
             x, y = cxs - cw / 2, (h - ch) / 2
         ev.append(_forma(0, t0, t1, x, y, cw, ch, 14 * esc, C["tarjeta"], entra=(-60 * esc, 0)))
         ev.append(_forma(1, t0, t1, x, y, 9 * esc, ch, 4 * esc, C["oro"], entra=(-60 * esc, 0)))
@@ -823,7 +837,7 @@ def ass_graficos(plan, formato, ruta):
         elif ti.get("lado") == "izq":
             x = sx
         if ti.get("modo") == "pantalla":
-            _pantalla(ev, t0, t1, w, h, C)
+            _pant(ev, t0, t1, w, h, C)
             x, y = cxs - cw / 2, (h - ch) / 2
         cxt = x + cw / 2
         borde = _cm(ti.get("color", "lima"))
@@ -840,12 +854,36 @@ def ass_graficos(plan, formato, ruta):
         t0, t1 = ci["t"], ci["t"] + ci.get("dur", 3.5)
         col = _cm(ci.get("tipo", "valor"))
         k = float(ci.get("escala", 1.0))
-        tv, tl, tf = 150 * esc * k, 26 * esc * k, 20 * esc * k
+        tv, tl, tf = 150 * esc * k, 32 * esc * k, 24 * esc * k   # etiqueta/fuente más grandes (antes 26/20 px: ilegibles en móvil y bajo el umbral M11b)
+        zona_w = (sw_right - sx) - 90 * esc
         wv = medir(ci["valor"], tv, "titular", -0.03 * tv)
-        wl = medir(ci.get("etiqueta", "").upper(), tl, "mono", 0.18 * tl)
-        wf = medir("FUENTE: " + ci["fuente"].upper(), tf, "mono", 0.18 * tf)
+        if wv > zona_w:                                   # cifra más ancha que la zona segura (ej. «10.000 USD» a 150 px = 840 px): se reduce lo justo para que quepa
+            tv *= zona_w / wv * 0.985
+            wv = medir(ci["valor"], tv, "titular", -0.03 * tv)
+        # se mide con el MISMO espaciado con que se dibuja (0.32): antes se medía a 0.18 y la línea de fuente se salía de la zona segura
+        def _envolver(txt, tam, partir=()):
+            """Parte `txt` (mono, espaciado 0.32) en líneas que caben en la zona segura, sin reducir el tamaño: primero por los separadores, luego por palabras."""
+            if medir(txt, tam, "mono", 0.32 * tam) <= zona_w:
+                return [txt]
+            for sep in partir:
+                ps = txt.split(sep)
+                if len(ps) > 1 and all(medir(p_, tam, "mono", 0.32 * tam) <= zona_w for p_ in ps):
+                    return ps
+            lns, cur_ = [], ""
+            for p_ in txt.split():
+                if cur_ and medir(cur_ + " " + p_, tam, "mono", 0.32 * tam) > zona_w:
+                    lns.append(cur_)
+                    cur_ = p_
+                else:
+                    cur_ = (cur_ + " " + p_).strip()
+            return lns + [cur_]
+        lin_e = _envolver(ci.get("etiqueta", "").upper(), tl, (" + ", " · "))
+        lin_f = _envolver("FUENTE: " + ci["fuente"].upper(), tf, (" · ",))
+        wl = max(medir(l_, tl, "mono", 0.32 * tl) for l_ in lin_e)
+        wf = max(medir(l_, tf, "mono", 0.32 * tf) for l_ in lin_f)
+        ex_e = tl * 1.45 * (len(lin_e) - 1)
         cw = max(wv, wl, wf) + 90 * esc
-        ch = tl + tv * 1.1 + tf + 100 * esc
+        ch = tl + ex_e + tv * 1.1 + tf * (1 + 1.45 * (len(lin_f) - 1)) + 100 * esc
         x = cxs - cw / 2 if es_vertical(formato) else (sx if ci.get("lado") == "izq" else sw_right - cw)
         y = sy_top + 24 * esc if es_vertical(formato) else (h * ci["y_frac"] if "y_frac" in ci else sy_top + 30 * esc)
         if es_vertical(formato):
@@ -856,12 +894,19 @@ def ass_graficos(plan, formato, ruta):
             elif ci.get("lado") == "der":
                 x = sw_right - cw
         if ci.get("modo") == "pantalla":
-            _pantalla(ev, t0, t1, w, h, C)
+            _pant(ev, t0, t1, w, h, C)
             x, y = cxs - cw / 2, (h - ch) / 2
+            try:    # sobre el panel los subtítulos siguen visibles abajo: la tarjeta se sube para no chocar con ellos (capa-vs-capa)
+                from .planos import tope_subtitulos
+                y = max(sy_top, min(y, tope_subtitulos(formato, w, h) * h - ch - 24 * esc))
+            except (ImportError, AttributeError, KeyError):
+                pass
         ev.append(_forma(0, t0, t1, x, y, cw, ch, 22 * esc, C["tarjeta"], borde=col, bord=max(2, int(3 * esc)), entra=(0, 40 * esc)))
-        ev.append(_texto(2, t0, t1, x + cw / 2, y + 36 * esc, ci.get("etiqueta", "").upper(), "Mono", col, an=8, tam=int(tl), spacing=0.32 * tl, entra=(0, 40 * esc)))
-        ev.append(_texto(2, t0, t1, x + cw / 2, y + 36 * esc + tl + 10 * esc, ci["valor"], "Tit", col, an=8, tam=int(tv), spacing=-0.03 * tv, entra=(0, 40 * esc)))
-        ev.append(_texto(2, t0, t1, x + cw / 2, y + ch - 34 * esc - tf, "FUENTE: " + ci["fuente"].upper(), "Mono", C["texto"], an=8, tam=int(tf), spacing=0.32 * tf, entra=(0, 40 * esc)))
+        for j_, l_ in enumerate(lin_e):
+            ev.append(_texto(2, t0, t1, x + cw / 2, y + 36 * esc + j_ * tl * 1.45, l_, "Mono", col, an=8, tam=int(tl), spacing=0.32 * tl, entra=(0, 40 * esc)))
+        ev.append(_texto(2, t0, t1, x + cw / 2, y + 36 * esc + tl + ex_e + 10 * esc, ci["valor"], "Tit", col, an=8, tam=int(tv), spacing=-0.03 * tv, entra=(0, 40 * esc)))
+        for j_, l_ in enumerate(lin_f):
+            ev.append(_texto(2, t0, t1, x + cw / 2, y + ch - 34 * esc - tf * (1 + 1.45 * (len(lin_f) - 1)) + j_ * tf * 1.45, l_, "Mono", C["texto"], an=8, tam=int(tf), spacing=0.32 * tf, entra=(0, 40 * esc)))
 
     # Títulos grandes sobre el presentador (estilo reels Aztec Lab, paleta MacroWise): línea fina + línea clave en lima, sin caja salvo púrpura/terracota.
     # Claves: t, dur, linea1, linea2, color (lima|oro|teal|purpura|terracota), anim (subir|escala|reveal|barrido), caja (bool), y (fracción del alto, sólo no verticales).
@@ -871,7 +916,7 @@ def ass_graficos(plan, formato, ruta):
         if es_vertical(formato) and "y" in tg:
             Pz["y_top"] = h * tg["y"]
         if tg.get("modo") == "pantalla":
-            _pantalla(ev, tg["t"], tg["t"] + tg.get("dur", 3.0), w, h, C)
+            _pant(ev, tg["t"], tg["t"] + tg.get("dur", 3.0), w, h, C)
             Pz["y_top"] = h * 0.36
         _titulo_grande(ev, tg, Pz, esc * float(tg.get("escala", 1.0)), C)
 
@@ -887,7 +932,7 @@ def ass_graficos(plan, formato, ruta):
         if es_vertical(formato) and "y" in cta:
             yb = h * cta["y"]
         if cta.get("modo") == "pantalla":
-            _pantalla(ev, t0, t1, w, h, C)
+            _pant(ev, t0, t1, w, h, C)
             yb = h * 0.34
         kc = float(cta.get("escala", 1.0))
         tv, tp, te = 62 * esc * kc, 140 * esc * kc, 36 * esc * kc

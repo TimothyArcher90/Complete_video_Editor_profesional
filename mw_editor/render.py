@@ -70,7 +70,7 @@ def render_base(src, recortes, wav, salida, formato, chain_pre, chain_post, fps=
         entrada_mask = ["-loop", "1", "-framerate", str(fps or 30), "-i", str(mp)]
     cmd = [FFMPEG, "-hide_banner", "-y", "-v", "error", "-stats", "-i", src, "-i", wav, *entrada_mask,
            "-/filter_complex", script, "-map", "[vout]", "-map", "1:a", "-t", f"{dur_total:.3f}",
-           *enc["x264"], "-c:a", "aac", "-b:a", "256k", "-ar", "48000", "-movflags", "+faststart", salida]
+           *enc["x264"], "-c:a", "aac", "-b:a", "256k", "-ac", "2", "-ar", "48000", "-movflags", "+faststart", salida]
     log(f"render base {formato} {W}x{H}: {n} tomas -> {Path(salida).name}")
     run(cmd, capture=not mostrar_progreso)
     script.unlink(missing_ok=True)

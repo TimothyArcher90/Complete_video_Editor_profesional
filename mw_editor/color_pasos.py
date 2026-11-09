@@ -159,7 +159,7 @@ def generar(video, proyecto, n=3, look=None, ident=None, ancho_tile=300):
     ad = Image.new("RGB", (2 * aw, n * (ah + lab_h)), (20, 20, 20))
     dd = ImageDraw.Draw(ad)
     for r in range(n):
-        for c, (nom, lab) in enumerate((("Original", "ANTES"), (PASOS[7], "DESPUÉS (final real: denoise + 8 pasos + nitidez suave)"))):
+        for c, (nom, lab) in enumerate((("Original", "ANTES"), (PASOS[7], "DESPUES (final real: denoise + 8 pasos + nitidez suave)"))):
             ad.paste(Image.fromarray(tiles[nom][r]).resize((aw, ah), Image.LANCZOS), (c * aw, r * (ah + lab_h) + lab_h))
             dd.text((c * aw + 4, r * (ah + lab_h) + 3), f"{lab} · t={t[r]}s · piel Y {medidas[nom][r]['piel_y']}", fill=(235, 235, 235))
     p_ad = graf / f"color_antes_despues_{ident}.png"

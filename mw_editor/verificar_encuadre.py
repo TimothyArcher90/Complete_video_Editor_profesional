@@ -76,13 +76,37 @@ def _cruza(a, b):
     return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
 
 
-def caras_en(video, fps=4.0, ancho_muestra=640):
-    """[(t, x0, y0, x1, y1, ojos_y)] normalizado 0-1 sobre el fotograma del video."""
+def _ruta_cache_caras(video, fps, ancho_muestra, desde, hasta):
+    import hashlib
+    import os
+    import tempfile
+    st = os.stat(video)
+    k = hashlib.sha1(f"{os.path.abspath(video)}|{st.st_size}|{int(st.st_mtime)}|{fps}|{ancho_muestra}|{desde}|{hasta}".encode()).hexdigest()[:16]
+    d = Path(tempfile.gettempdir()) / "mw_cache_caras"
+    d.mkdir(exist_ok=True)
+    return d / f"{k}.json"
+
+
+def caras_en(video, fps=4.0, ancho_muestra=640, desde=0.0, hasta=None, cache=True):
+    """[(t, x0, y0, x1, y1, ojos_y)] normalizado 0-1 sobre el fotograma del video.
+    Caché en disco por (archivo, tamaño, mtime, fps, ancho, tramo): YuNet es lo más caro del revisor en largos (35 min a 2 fps = 4200 detecciones) y
+    el mismo base se mide varias veces (revisor, gates, QC). `desde`/`hasta` (s) miden un tramo; los t devueltos son del video entero."""
+    video = str(video)
+    cj = None
+    if cache:
+        try:
+            cj = _ruta_cache_caras(video, fps, ancho_muestra, desde, hasta)
+            if cj.exists():
+                d = json.loads(cj.read_text(encoding="utf-8"))
+                return [tuple(x) for x in d["caras"]], d["total"]
+        except (OSError, ValueError, KeyError):
+            pass
     info = probe(video)
     alto = int(round(ancho_muestra * info["alto"] / info["ancho"] / 2) * 2)
     det = cv2.FaceDetectorYN.create(str(ROOT / "brand" / "models" / "face_detection_yunet_2023mar.onnx"), "", (ancho_muestra, alto), 0.7, 0.3, 5000)
-    p = subprocess.Popen([FFMPEG, "-hide_banner", "-v", "error", "-i", video, "-vf", f"fps={fps},scale={ancho_muestra}:{alto}", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"],
-                         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    tramo = (["-ss", f"{desde:.3f}"] if desde else []) + (["-t", f"{hasta - desde:.3f}"] if hasta else [])
+    p = subprocess.Popen([FFMPEG, "-hide_banner", "-v", "error", *tramo, "-i", video, "-vf", f"fps={fps},scale={ancho_muestra}:{alto}", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"],
+                         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
     n = ancho_muestra * alto * 3
     out, i, total = [], 0, 0
     while True:
@@ -95,9 +119,14 @@ def caras_en(video, fps=4.0, ancho_muestra=640):
             c = max(caras, key=lambda c: c[2] * c[3])
             x, y, w, h = [float(v) for v in c[:4]]
             ojos = (float(c[5]) + float(c[7])) / 2
-            out.append((i / fps, x / ancho_muestra, y / alto, (x + w) / ancho_muestra, (y + h) / alto, ojos / alto))
+            out.append((desde + i / fps, x / ancho_muestra, y / alto, (x + w) / ancho_muestra, (y + h) / alto, ojos / alto))
         i += 1
     p.wait()
+    if cj is not None and total:
+        try:
+            cj.write_text(json.dumps({"caras": out, "total": total}), encoding="utf-8")
+        except OSError:
+            pass
     return out, total
 
 

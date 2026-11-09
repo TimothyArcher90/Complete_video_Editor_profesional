@@ -493,8 +493,12 @@ def _contraste_capa(base_bgr, ov_bgra):
         mk = ((q == k) & opaco).astype(np.uint8)
         n, lab, st, _ = cv2.connectedComponentsWithStats(mk, connectivity=8)
         glifo = np.zeros_like(opaco)
+        # El panel opaco a pantalla completa (revisor_capas) es del mismo color Warm Black que el texto oscuro sobre caja de color: sin esta
+        # excepción TODA la clase de color se marcaba «relleno de tarjeta» y el texto oscuro (ej. «El hábito» sobre caja oro) se medía contra sí
+        # mismo (1,1:1 falso). El panel sigue contando como fondo (cajas_m), pero no arrastra a las letras de su mismo color.
         if any(st[i, cv2.CC_STAT_AREA] > 300 and st[i, cv2.CC_STAT_AREA] / max(1, st[i, cv2.CC_STAT_WIDTH] * st[i, cv2.CC_STAT_HEIGHT]) > 0.55
-               and st[i, cv2.CC_STAT_WIDTH] > 14 and st[i, cv2.CC_STAT_HEIGHT] > 14 for i in range(1, n)):
+               and st[i, cv2.CC_STAT_WIDTH] > 14 and st[i, cv2.CC_STAT_HEIGHT] > 14
+               and not (st[i, cv2.CC_STAT_WIDTH] >= 0.9 * w2 and st[i, cv2.CC_STAT_HEIGHT] >= 0.9 * h2) for i in range(1, n)):
             cajas_m |= mk > 0  # este color es relleno de tarjeta: también sus trozos sueltos (huecos de las letras)
             continue
         for i in range(1, n):
@@ -511,13 +515,15 @@ def _contraste_capa(base_bgr, ov_bgra):
     if not cand:
         return None
     mayor = max(c for c, _, _ in cand)
-    textos = [(k, m) for c, k, m in cand if c >= 0.25 * mayor]  # descarta los niveles de color del borde suavizado
+    # descarta los niveles de gris/color del BORDE SUAVIZADO (antialias): cada nivel intermedio de «blanco sobre oscuro» se medía como si fuera
+    # un texto de color apagado y daba 1,2-1,9:1 falsos; el color real del texto es la clase con más píxeles (umbral 0,45 del mayor)
+    textos = [(k, m) for c, k, m in cand if c >= 0.45 * mayor]
     # todo lo opaco que NO es relleno de caja ni marco = texto (incluye su borde suavizado); alrededor de eso no se mide el fondo
     texto_todo = opaco & ~cajas_m & ~marcos_m
     k_ex = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
     k_cerca = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
     excluir = (cv2.dilate(texto_todo.astype(np.uint8), k_ex) > 0) | ((a > 0.02) & (a < 0.9) & (ov_lum > 0.2))
-    peor = None
+    por_lado = {}
     for k, m in textos:
         lt = float(np.median(_lum(orgb[m])))
         cerca = cv2.dilate(m.astype(np.uint8), k_cerca) > 0
@@ -527,8 +533,9 @@ def _contraste_capa(base_bgr, ov_bgra):
         fondo = lum[anillo]
         lb = float(np.percentile(fondo, 75 if lt >= np.median(fondo) else 25))
         r = (max(lt, lb) + 0.05) / (min(lt, lb) + 0.05)
-        peor = r if peor is None else min(peor, r)
-    return peor
+        lado = lt >= lb                                  # texto más claro (True) o más oscuro (False) que su fondo
+        por_lado[lado] = max(por_lado.get(lado, 0.0), r)  # los niveles de antialias están en el mismo lado y con menos contraste que el color real: se queda el mejor
+    return min(por_lado.values()) if por_lado else None
 
 
 @lru_cache(maxsize=4)
@@ -560,6 +567,16 @@ def m_capas(ctx):
     ms = ms + [None] * (n - len(ms))
     mg = mg + [None] * (n - len(mg))
     onsets = sorted({e["ini"] for e in leer_ass(ctx.graf_ass)})
+    # paneles a pantalla completa decididos por revisor_capas: ocultan al presentador A PROPÓSITO (opacos, fuera de las métricas de cara/zona segura)
+    try:
+        mv_ = re.search(r"_v(\d+)$", ctx.pre)
+        rj = json.loads((ctx.proj / "00_DOCS" / f"revision_capas_{ctx.fm}_v{mv_.group(1)}.json").read_text(encoding="utf-8")) if mv_ else {}
+        wins = [(p_["t"], p_["t"] + (p_.get("dur") or 3.0)) for p_ in rj.get("panel_completo", [])]
+        for i in range(n):
+            if any(a - 0.1 <= i / fps <= b + 0.1 for a, b in wins):
+                mg[i] = None
+    except (OSError, ValueError, KeyError):
+        pass
 
     def estable_graf(t):
         return not any(o - 0.15 <= t < o + 0.3 for o in onsets)
@@ -793,7 +810,23 @@ def m_entrega(ctx):
     px = int(v.get("width", 0)) * int(v.get("height", 0))
     rec = 8e6 * px / (1920 * 1080) * (1.5 if fps and fps > 31 else 1.0)
     if br:
-        (ok if br >= rec else blandos).append(f"bitrate {br / 1e6:.1f} Mbps (rec. {rec / 1e6:.1f})")
+        if br >= rec:
+            ok.append(f"bitrate {br / 1e6:.1f} Mbps (rec. {rec / 1e6:.1f})")
+        else:
+            # El encode ya es x264 crf 17 slow (regla de calidad): el bitrate lo manda el ORIGEN, no se puede inventar detalle. Si el origen es
+            # más bajo que lo recomendado y el entregable conserva >= 60 % de su bitrate, se declara como límite del origen (no se finge arreglo).
+            sbr = 0
+            try:
+                for rp in sorted((ctx.proj / "01_RAW").glob("*")):
+                    if rp.suffix.lower() in (".mp4", ".mov", ".mkv", ".m4v", ".webm"):
+                        sbr = int(probe(str(rp)).get("bitrate") or 0)
+                        break
+            except (OSError, ValueError, KeyError):
+                sbr = 0
+            if sbr and sbr < rec and br >= 0.6 * sbr:
+                ok.append(f"bitrate {br / 1e6:.1f} Mbps = límite del ORIGEN ({sbr / 1e6:.1f} Mbps; rec. {rec / 1e6:.1f}): crf 17 slow ya lo conserva, no se arregla en post")
+            else:
+                blandos.append(f"bitrate {br / 1e6:.1f} Mbps (rec. {rec / 1e6:.1f})")
     abr = 0
     if a:
         (ok if a.get("codec_name") == "aac" else duros).append(f"audio {a.get('codec_name')}")

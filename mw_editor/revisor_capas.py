@@ -39,6 +39,9 @@ K_SUBS = 0.25                # margen de la cara para subtítulos (casi la cara 
 CRITERIO_SUBS = 95.0         # % mínimo de fotogramas con cara sin solape de subtítulos (el mismo criterio de verificar_encuadre)
 ESCALAS = (1.0, 0.85, 0.7, 0.6)
 TIPOS = ("lower_thirds", "titulos", "cifras", "titulos_grandes", "cta")
+GRANDES = ("titulos", "cifras", "titulos_grandes", "cta")   # solo estas pueden acabar en panel a pantalla completa; el lower third NUNCA (cápsula u omitir)
+SIN_MEDIR = ("pantalla", "omitir")                           # modos que no se miden contra la cara (el panel oculta al presentador a propósito; omitido no se dibuja)
+TOL_LL = 0.02                # capa-vs-capa: fracción de la capa más pequeña cubierta por otra para contar como choque
 
 
 class ColisionCara(RuntimeError):
@@ -122,11 +125,12 @@ def _flujo_mascaras(ass, W, H, fps, dur):
 
 
 # ------------------------------------------------------------------------------------------------ medición
-def _tramos(filas, fps):
+def _tramos(filas, fps, tol=None):
     """Une muestras consecutivas con solape en tramos {t0,t1,max}. filas = [(t, cub)]."""
+    tol = TOL if tol is None else tol
     out, cur = [], None
     for t, cub in filas:
-        if cub > TOL:
+        if cub > tol:
             if cur and t - cur["t1"] <= 2.1 / fps:
                 cur["t1"], cur["max"] = t, max(cur["max"], cub)
             else:
@@ -188,6 +192,65 @@ def medir_clips(plan, formato, caras, fps=4.0):
     return res
 
 
+def medir_capas_entre_si(plan, formato, ass_subs, dur, fps=4.0):
+    """Choques CAPA-vs-CAPA (título vs subtítulo vs tarjeta vs lower third) y capa fuera de la zona segura, en cada instante.
+    Cada tipo de gráfico y los subtítulos se renderizan a su propia máscara; los paneles opacos se dibujan SIN el fondo (`sin_panel`)
+    para medir solo las tarjetas. La entrada (0,35 s) y el cambio de tarjeta se excluyen. Devuelve {pares:{'a|b':[tramos]}, fuera_zona:[tramos]}.
+    Complementa a gates.colisiones (capa-vs-CARA sobre el MP4 final): esto es capa-vs-capa sobre el plan."""
+    from . import subs as su
+    W, H = dims(formato)
+    seg = caja_segura_px(formato)
+    tol_seg = 0.012 * H
+    wm, hm = _dim_mascara(W, H)
+    tmp = Path(tempfile.mkdtemp(prefix="mw_ll_"))
+    flujos, onsets = {}, []
+    for tipo in TIPOS:
+        its = [it for it in plan.get(tipo, []) if it.get("modo") != "omitir"]
+        if not its:
+            continue
+        a = tmp / f"{tipo}.ass"
+        su.ass_graficos({tipo: its}, formato, str(a), sin_panel=True)
+        flujos[tipo] = _flujo_mascaras(str(a), W, H, fps, dur)
+        onsets += [it["t"] for it in its]
+    if ass_subs and Path(ass_subs).exists():
+        flujos["subtítulos"] = _flujo_mascaras(str(ass_subs), W, H, fps, dur)
+    nombres = list(flujos)
+    pares, fuera = {}, []
+    try:
+        for fr in zip(*[flujos[n] for n in nombres]):
+            i = fr[0][0]
+            t = i / fps
+            if any(o - 0.02 <= t < o + 0.35 for o in onsets):
+                continue
+            ms = {n: f[1] for n, f in zip(nombres, fr)}
+            for x in range(len(nombres)):
+                for y in range(x + 1, len(nombres)):
+                    a, b = ms[nombres[x]], ms[nombres[y]]
+                    na, nb = int(a.sum()), int(b.sum())
+                    if not na or not nb:
+                        continue
+                    frac = float((a & b).sum()) / min(na, nb)
+                    pares.setdefault(f"{nombres[x]}|{nombres[y]}", []).append((t, frac))
+            for n in nombres:
+                if n == "subtítulos" or not ms[n].any():
+                    continue
+                ys_, xs_ = np.where(ms[n])
+                bx0, bx1, by0, by1 = xs_.min() * W / wm, (xs_.max() + 1) * W / wm, ys_.min() * H / hm, (ys_.max() + 1) * H / hm
+                if bx0 < seg[0] - tol_seg or bx1 > seg[2] + tol_seg or by0 < seg[1] - tol_seg or by1 > seg[3] + tol_seg:
+                    fuera.append((t, 1.0))
+    finally:
+        for f in flujos.values():
+            f.close()
+        for p in tmp.glob("*"):
+            p.unlink(missing_ok=True)
+        try:
+            tmp.rmdir()
+        except OSError:
+            pass
+    out = {k: _tramos(v, fps, TOL_LL) for k, v in pares.items()}
+    return {"pares": {k: v for k, v in out.items() if v}, "fuera_zona": _tramos(fuera, fps, 0.5)}
+
+
 # ------------------------------------------------------------------------------------------------ reubicación
 def _ventana(item):
     return item["t"], item["t"] + item.get("dur", 3.0)
@@ -220,7 +283,7 @@ def _candidatos(tipo, item, formato, escala):
     return out
 
 
-def _evaluar_candidatas(tipo, item, cands, formato, cara_u, sub_top_px):
+def _evaluar_candidatas(tipo, item, cands, formato, cara_u, sub_top_px, modo=None):
     """Renderiza TODAS las candidatas en una sola pasada (cada una en su ranura de 1 s) y devuelve la lista de máscaras-bbox válidas."""
     from . import subs as su
     W, H = dims(formato)
@@ -228,6 +291,8 @@ def _evaluar_candidatas(tipo, item, cands, formato, cara_u, sub_top_px):
     for k, p in enumerate(cands):
         it = {kk: v for kk, v in item.items() if kk not in ("modo", "y_frac", "y", "lado", "escala")}
         it.update(p)
+        if modo:
+            it["modo"] = modo
         it["t"], it["dur"] = float(k), 1.0
         items.append(it)
     tmp = Path(tempfile.mkdtemp(prefix="mw_rcc_"))
@@ -265,14 +330,33 @@ def _sub_top_px(formato):
     return tope_subtitulos(formato, W, H) * H - 0.01 * H
 
 
-def reubicar(tipo, item, formato, caras):
+def reubicar_capsula(item, formato, caras):
+    """ESCALÓN 'cápsula' (solo lower thirds): píldora pequeña opaca Warm Black con el nombre, en la banda libre de cara MÁS BAJA de la zona segura
+    (y de arriba de los subtítulos). Devuelve dict de parámetros o None si no cabe en ningún sitio."""
+    W, H = dims(formato)
+    t0, t1 = _ventana(item)
+    cara_u = _union_cara_ventana(caras, t0, t1, W, H)
+    if cara_u is None:
+        return None
+    sub_top = _sub_top_px(formato)
+    ys = [round(v, 3) for v in np.arange(0.93, 0.02, -0.015)]            # de abajo hacia arriba: la primera libre es la más baja
+    for esc in (1.0, 0.85, 0.7):
+        cands = [{"y_frac": y, "escala": esc, "lado": lado} for y in ys for lado in ("centro", "izq", "der")]
+        ok = _evaluar_candidatas("lower_thirds", item, cands, formato, cara_u, sub_top, modo="capsula")
+        if ok:
+            k = min(v[0] for v in ok)
+            return {"y_frac": float(cands[k]["y_frac"]), "escala": esc, "lado": cands[k]["lado"], "modo": "capsula"}
+    return None
+
+
+def reubicar(tipo, item, formato, caras, forzar_sub=False):
     """Intenta sacar `item` de la cara. Devuelve (accion, detalle). Modifica `item` in situ. accion in {reubicado, acortado, pantalla, sin_cara}."""
     W, H = dims(formato)
     t0, t1 = _ventana(item)
     cara_u = _union_cara_ventana(caras, t0, t1, W, H)
     if cara_u is None:
         return "sin_cara", "sin cara detectada en la ventana"
-    sub_top = _sub_top_px(formato) if es_vertical(formato) else None
+    sub_top = _sub_top_px(formato) if (es_vertical(formato) or forzar_sub) else None
     # a) reubicar (escala de mayor a menor; dentro de cada escala, la primera candidata libre en el orden de preferencia)
     for esc in ESCALAS:
         cands = _candidatos(tipo, item, formato, esc)
@@ -309,9 +393,71 @@ def _items_activos(plan, a, b):
     for tipo in TIPOS:
         for it in plan.get(tipo, []):
             t0, t1 = _ventana(it)
-            if t0 < b and a < t1 and it.get("modo") != "pantalla":
+            if t0 < b and a < t1 and it.get("modo") not in SIN_MEDIR:
                 out.append((tipo, it))
     return out
+
+
+def _resolver_capas(plan, formato, caras, ll, acciones):
+    """Resuelve choques capa-vs-capa: gráfico vs subtítulo -> reubicar sobre los subtítulos (o cápsula/omitir si es lower third); gráfico vs
+    gráfico -> la que entra después espera a que acabe la otra (si queda >= 1,5 s; si no, lower third se omite). Devuelve nº de cambios."""
+    cambios = 0
+    for par, tramos in ll["pares"].items():
+        a, b = par.split("|")
+        for tr in tramos:
+            act = _items_activos(plan, tr["t0"] - 0.01, tr["t1"] + 0.01)
+            if "subtítulos" in (a, b):
+                g = a if b == "subtítulos" else b
+                for tipo, it in act:
+                    if tipo != g or it.get("_ll"):
+                        continue
+                    it["_ll"] = True
+                    if it.get("modo") == "capsula":      # la cápsula se recoloca como cápsula (reubicar() la convertiría en lower third completo)
+                        cap = reubicar_capsula(it, formato, caras)
+                        if cap:
+                            it.update(cap)
+                            ac, det = "capsula", cap
+                        else:
+                            it["modo"] = "omitir"
+                            ac, det = "omitido", "la cápsula choca con subtítulos y no hay sitio"
+                        cambios += 1
+                        acciones.append({"par": par, "capa": tipo, "t": it["t"], "accion": ac, "detalle": det})
+                        continue
+                    ac, det = reubicar(tipo, it, formato, caras, forzar_sub=True)
+                    if ac != "reubicado" and tipo == "lower_thirds":
+                        cap = reubicar_capsula(it, formato, caras) if it.get("modo") != "capsula" else None
+                        if cap:
+                            it.update(cap)
+                            ac, det = "capsula", cap
+                        else:
+                            it["modo"] = "omitir"
+                            ac, det = "omitido", "choca con subtítulos y no hay sitio"
+                    elif ac != "reubicado" and tipo in GRANDES:
+                        it["modo"] = "pantalla"       # no hay sitio libre de cara Y de subtítulos con ese tamaño: panel opaco (la tarjeta se sube sobre los subtítulos)
+                        ac, det = "pantalla", "choca con los subtítulos y no hay sitio libre: panel opaco a pantalla completa"
+                    if ac in ("reubicado", "capsula", "omitido", "pantalla"):
+                        cambios += 1
+                    acciones.append({"par": par, "capa": tipo, "t": it["t"], "accion": ac, "detalle": det})
+            else:
+                dos = [(tipo, it) for tipo, it in act if tipo in (a, b)]
+                if len(dos) < 2:
+                    continue
+                dos.sort(key=lambda x: x[1]["t"])
+                (_, pri), (tipo2, seg2) = dos[0], dos[-1]
+                nt = pri["t"] + pri.get("dur", 3.0) + 0.1
+                nd = seg2["t"] + seg2.get("dur", 3.0) - nt
+                if nd >= 1.5:
+                    seg2["t"], seg2["dur"] = round(nt, 2), round(nd, 2)
+                    ac, det = "retrasado", {"t": seg2["t"], "dur": seg2["dur"]}
+                elif tipo2 == "lower_thirds":
+                    seg2["modo"] = "omitir"
+                    ac, det = "omitido", "choca con otra tarjeta y no queda tiempo"
+                else:
+                    ac, det = "sin_resolver", "dos tarjetas a la vez y no queda tiempo para separarlas: revisar a mano"
+                if ac != "sin_resolver":
+                    cambios += 1
+                acciones.append({"par": par, "capa": tipo2, "t": seg2["t"], "accion": ac, "detalle": det})
+    return cambios
 
 
 def revisar_y_corregir(base, plan, formato, ass_graficos_ruta, ass_subs_ruta, docs=None, graficos_dir=None, etiqueta="", fps=None, reparar=True):
@@ -334,7 +480,7 @@ def revisar_y_corregir(base, plan, formato, ass_graficos_ruta, ass_subs_ruta, do
     ass_med = str(Path(ass_graficos_ruta).with_suffix(".medicion.ass"))
 
     def medir_graf():
-        pm = {k: [it for it in plan.get(k, []) if it.get("modo") != "pantalla"] for k in TIPOS}
+        pm = {k: [it for it in plan.get(k, []) if it.get("modo") not in SIN_MEDIR] for k in TIPOS}
         if not any(pm.values()):
             return {"filas": [], "tramos": [], "con_cara": 0, "con_capa": 0, "sin_solape_pct": 100.0}
         su.ass_graficos(pm, formato, ass_med)
@@ -364,8 +510,17 @@ def revisar_y_corregir(base, plan, formato, ass_graficos_ruta, ass_subs_ruta, do
                     if acorta:
                         it["t"], it["dur"] = acorta
                         accion, det = "acortado", {"t": acorta[0], "dur": acorta[1]}
+                    elif tipo == "lower_thirds":
+                        # c) CÁPSULA (píldora opaca pequeña en la banda libre más baja) -> d) omitir y reportar. El lower third NUNCA va a pantalla completa.
+                        cap = reubicar_capsula(it, formato, caras) if it.get("modo") != "capsula" else None
+                        if cap:
+                            it.update(cap)
+                            accion, det = "capsula", {kk: v for kk, v in cap.items()}
+                        else:
+                            it["modo"] = "omitir"
+                            accion, det = "omitido", "sin sitio libre de cara ni como cápsula: el lower third no se dibuja (el nombre sale en el SRT/descripción); NO se pasa a pantalla completa"
                     else:
-                        it["modo"] = "pantalla"       # c) panel a pantalla completa opaco
+                        it["modo"] = "pantalla"       # c) panel a pantalla completa opaco: SOLO tarjetas/cifras/títulos grandes
                         accion, det = "pantalla", "no hay zona libre de cara con ese tamaño: panel opaco a pantalla completa"
                 it["_revisado"] = True
                 informe["acciones"].append({"capa": tipo, "t": t0, "antes": antes, "accion": accion, "detalle": det})
@@ -379,6 +534,20 @@ def revisar_y_corregir(base, plan, formato, ass_graficos_ruta, ass_subs_ruta, do
         if tiene_graf:
             su.ass_graficos(plan, formato, ass_graficos_ruta)
         mg2 = medir_graf()
+    # ---- capa-vs-capa (título/subtítulo/tarjeta/lower third/zona segura): mide, resuelve lo resoluble y vuelve a medir
+    ass_subs_ok = ass_subs_ruta if (ass_subs_ruta and Path(ass_subs_ruta).exists()) else None
+    ll0 = medir_capas_entre_si(plan, formato, ass_subs_ok, dur, fps) if (tiene_graf or ass_subs_ok) else {"pares": {}, "fuera_zona": []}
+    informe["capas_entre_si"] = {"antes": ll0, "acciones": [], "despues": ll0}
+    if reparar and (ll0["pares"] or ll0["fuera_zona"]):
+        cambios = _resolver_capas(plan, formato, caras, ll0, informe["capas_entre_si"]["acciones"])
+        if cambios:
+            if tiene_graf:
+                su.ass_graficos(plan, formato, ass_graficos_ruta)
+            informe["capas_entre_si"]["despues"] = medir_capas_entre_si(plan, formato, ass_subs_ok, dur, fps)
+            mg2 = medir_graf()      # lo movido pudo volver a tocar la cara: se mide de nuevo (cualquier resto cae en la puerta dura)
+    lld = informe["capas_entre_si"]["despues"]
+    sub_mal = {k: v for k, v in lld["pares"].items() if "subtítulos" in k.split("|")}
+    informe["capas_entre_si"]["estado"] = "FAIL" if sub_mal else ("WARN" if (lld["pares"] or lld["fuera_zona"]) else "PASS")
     # (re)medición final ya hecha en la última ronda
     informe["despues"]["graficos"] = {k: v for k, v in mg2.items() if k != "filas"}
     informe["despues"]["clips"] = medir_clips(plan, formato, caras, fps)
@@ -392,6 +561,8 @@ def revisar_y_corregir(base, plan, formato, ass_graficos_ruta, ass_subs_ruta, do
     informe["fallos"] = fallos
     informe["estado"] = "PASS" if not fallos else "FAIL"
     informe["panel_completo"] = [{"capa": t, "t": it["t"], "dur": it.get("dur")} for t in TIPOS for it in plan.get(t, []) if it.get("modo") == "pantalla"]
+    informe["capsulas"] = [{"capa": t, "t": it["t"], "dur": it.get("dur")} for t in TIPOS for it in plan.get(t, []) if it.get("modo") == "capsula"]
+    informe["omitidos"] = [{"capa": t, "t": it["t"], "dur": it.get("dur"), "texto": it.get("nombre") or it.get("valor") or it.get("linea2")} for t in TIPOS for it in plan.get(t, []) if it.get("modo") == "omitir"]
     if docs:
         Path(docs).mkdir(parents=True, exist_ok=True)
         (Path(docs) / f"revision_capas_{formato}{etiqueta}.json").write_text(json.dumps(informe, ensure_ascii=False, indent=1, default=float), encoding="utf-8")
@@ -452,6 +623,8 @@ def instantes_de_plan(plan, dur):
     ts = []
     for tipo in TIPOS:
         for it in plan.get(tipo, []):
+            if it.get("modo") == "omitir":
+                continue
             t0, t1 = _ventana(it)
             ts.append(min(dur - 0.2, t0 + min(1.2, (t1 - t0) * 0.6)))
     return sorted(set(round(t, 1) for t in ts))
