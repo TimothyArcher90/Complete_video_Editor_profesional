@@ -163,6 +163,14 @@ def produce(master, raiz=None, brief_path=None, nombre=None, n_reels=5, min_clip
         fichas = ex.exportar(proj, largo, rapido=rapido, titulo=brief.get("titulo"), tema=brief.get("tema", "lima"), etiqueta=brief.get("etiqueta", "MACROWISE"),
                              cta=brief.get("cta", ""), idioma=idioma, estilo="minimo")
         manifiesto["publicar_largo"] = [f["archivo_publicar"] for f in fichas]
+        try:                                               # puerta: ninguna capa sobre la cara (compara base vs entregable con YuNet)
+            if plan_p and fichas:
+                g = gt.colisiones(base, fichas[0]["archivo_publicar"], plan_p)
+                manifiesto.setdefault("puertas", {})["colisiones_largo"] = g["estado"]
+                if g["estado"] != "PASS":
+                    manifiesto["avisos"].append(f"colisiones capa–cara en el largo: {g['estado']} — {g['detalle']}")
+        except Exception as e:  # noqa: BLE001
+            manifiesto["avisos"].append(f"puerta de colisiones no corrió: {str(e)[:80]}")
         T["largo_exportar_s"] = round(time.time() - t0, 1)
     # ---- (b) REELS ----
     if not sin_reels and palabras:
@@ -186,11 +194,15 @@ def produce(master, raiz=None, brief_path=None, nombre=None, n_reels=5, min_clip
         manifiesto["avisos"].append("sin transcripción (¿sin audio?): no se pueden elegir reels")
     T["total_s"] = round(time.time() - t_ini, 1)
     raw_ok = gt.verificar_raw(proj)
-    manifiesto["puertas"] = {"raw": raw_ok["estado"]}
+    manifiesto.setdefault("puertas", {})["raw"] = raw_ok["estado"]
     if raw_ok["estado"] == "FAIL":
         manifiesto["avisos"].append("01_RAW CAMBIÓ durante la producción: " + raw_ok["detalle"])
     (proj / "00_DOCS" / "produccion.json").write_text(json.dumps(manifiesto, ensure_ascii=False, indent=1), encoding="utf-8")
     _siguiente_paso(proj, nombre, brief, manifiesto, palabras)
+    ent = list(manifiesto.get("publicar_largo", [])) + [p for r in manifiesto["reels"] for p in r.get("publicar", [])]
+    gt.entrega(proj, ent, decisiones=manifiesto["avisos"] or ["(sin avisos)"],
+               fuera=["Nada se publicó ni se envió.", "Cifras detectadas sin fuente oficial no se rotularon (ver SIGUIENTE_PASO.md)."],
+               hice=[f"Largo + {len([r for r in manifiesto['reels'] if not r.get('error')])} reels desde {Path(master).name}", f"Puertas: {manifiesto.get('puertas', {})}"])
     log(f"PRODUCCIÓN LISTA en {T['total_s'] / 60:.1f} min -> {proj}")
     return manifiesto
 

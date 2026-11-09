@@ -104,6 +104,8 @@ RELLENO_MAX = 0.30              # fracción máxima del recorte que puede ser re
 HUECO_SUBS = 0.03               # holgura (fracción del alto) entre la barbilla y el bloque de subtítulos (absorbe el ruido de YuNet, ~2 %)
 K_MIN = 0.70                    # escala mínima del video cuando la cara es enorme (por debajo, el fondo desenfocado domina)
 PELO = 0.35                     # la cabeza real sobresale ~35 % del alto de la caja de YuNet por encima de ella
+AIRE = 0.035                    # aire mínimo (fracción del alto de salida) entre el pelo y el borde superior: la cabeza NUNCA toca el borde
+CARA_MAX = 0.32                 # la caja de la cara no ocupa más de ~32 % del alto de salida en vertical (~45 % del ancho: tope de gates.encuadre); más = «demasiado cerca» -> se reduce el video (k >= K_MIN)
 
 
 def _formato_de(out_w, out_h):
@@ -173,7 +175,7 @@ def _encuadre_cara(stats, src_h, cw0, ch0, z0, zoom_alt, sub_top, horizontal=Fal
     z = z0
     while z <= zmax + 1e-9:
         ch = ch0 / z
-        e_min = (eye - top + PELO * hf) / ch + 0.01             # cabeza entera (con pelo) dentro del encuadre
+        e_min = (eye - top + PELO * hf) / ch + AIRE             # cabeza entera (con pelo) dentro del encuadre
         e_max = sub_top - HUECO_SUBS - (bot - eye) / ch         # barbilla por encima de los subtítulos
         f_lo = (eye - max(0.0, src_h - ch)) / ch                # ojos si el recorte baja lo más posible dentro del origen
         f_hi = eye / ch                                         # ojos si el recorte va arriba del todo (y0 = 0)
@@ -200,7 +202,7 @@ def _encuadre_cara(stats, src_h, cw0, ch0, z0, zoom_alt, sub_top, horizontal=Fal
         return zmax, y0, 0.0, (eye - y0) / ch, None
     # nivel 3: relleno inferior (el recorte baja más allá del origen) o, si la cara es tan grande que no cabe, reducir el video
     ch = ch0 / z0
-    e_min = (eye - top + PELO * hf) / ch + 0.01
+    e_min = (eye - top + PELO * hf) / ch + AIRE
     e_max = sub_top - HUECO_SUBS - (bot - eye) / ch
     if e_max >= e_min:
         p = _punto_en(max(OJOS_OBJ[0], e_min), min(OJOS_OBJ[1], e_max), ideal)
@@ -215,12 +217,31 @@ def _encuadre_cara(stats, src_h, cw0, ch0, z0, zoom_alt, sub_top, horizontal=Fal
     # cara demasiado grande para tener cabeza entera Y barbilla sobre los subtítulos: se reduce el video (escala k) sobre su propio
     # fondo desenfocado y oscurecido (como el modo 'pilar'). Recorte arriba lo justo para que entre la cabeza con pelo.
     limite = sub_top - HUECO_SUBS
-    y0 = min(max(top - PELO * hf - 0.02 * ch, 0.0), max(0.0, src_h - ch))
+    y0 = min(max(top - PELO * hf - AIRE * ch, 0.0), max(0.0, src_h - ch))
     k = min(1.0, limite * ch / max(bot - y0, 1.0))
     k = max(k, K_MIN)
     e0, c0 = k * (eye - y0) / ch, k * (bot - y0) / ch
     yf = min(max(ideal - e0, 0.0), max(0.0, limite - c0))
     return z0, y0, 0.0, e0 + yf, {"k": k, "yf": yf}
+
+
+def _tope_cara(stats, src_h, ch, y_actual, sub_top):
+    """Si la caja de la cara ocupa más de CARA_MAX del alto de salida con el recorte elegido, devuelve {k, yf, y0} (video a escala k sobre fondo
+    Warm Black sólido); si no, None. k >= K_MIN (por debajo el fondo sólido domina y se ve como error)."""
+    cx, top, bot, eye = stats
+    hf = bot - top
+    frac = hf / ch
+    if frac <= CARA_MAX:
+        return None
+    limite = sub_top - HUECO_SUBS
+    y0 = min(max(top - PELO * hf - AIRE * ch, 0.0), max(0.0, src_h - ch))
+    k = max(K_MIN, min(1.0, CARA_MAX / frac, limite * ch / max(bot - y0, 1.0)))
+    if k >= 0.985:
+        return None
+    ideal = sum(OJOS_OBJ) / 2
+    e0, c0 = k * (eye - y0) / ch, k * (bot - y0) / ch
+    yf = min(max(ideal - e0, 0.0), max(0.0, limite - c0))
+    return {"k": k, "yf": yf, "y0": y0}
 
 
 def recortes(tomas_lista, caras, src_w, src_h, out_w, out_h, zoom_alt=1.12, titular_zoom=True, formato=None):
@@ -247,6 +268,10 @@ def recortes(tomas_lista, caras, src_w, src_h, out_w, out_h, zoom_alt=1.12, titu
         pad, encogido = 0.0, None
         if st and con_subs:
             z, y, pad, _, encogido = _encuadre_cara(st, src_h, cw0, ch0, z, zoom_alt, sub_top, horizontal)
+            if not horizontal and not encogido:
+                encogido = _tope_cara(st, src_h, ch0 / z, y, sub_top)          # cara demasiado grande -> reducir el video (nunca «demasiado cerca»)
+                if encogido:
+                    y, pad = encogido.pop("y0"), 0.0
             cw, ch = cw0 / z, ch0 / z
             x = min(max(cx - cw / 2, 0), src_w - cw)
         else:

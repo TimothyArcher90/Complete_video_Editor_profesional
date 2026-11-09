@@ -127,8 +127,8 @@ def colisiones(base, final, plan):
     res = revisar(base, final, plan)
     mal = [x for x in res if x.get("estado") == "TAPA LA CARA"]
     med = [x for x in res if x.get("solape_cara") is not None]
-    est = "FAIL" if mal else ("WARN" if not med else "PASS")
-    return _r("capas vs cara", est, f"{len(med)} capas medidas, {len(mal)} tapan la cara", capas=res)
+    est = "FAIL" if mal else ("WARN" if (res and not med) else "PASS")      # sin capas en el plan = nada que tapar = PASS
+    return _r("capas vs cara", est, f"{len(med)} capas medidas, {len(mal)} tapan la cara" + ("" if res else " (el plan no tiene capas)"), capas=res)
 
 
 # ---------- 4b. encuadre y franja oscura (lección: cara enorme en reels, poco aire, franja negra abajo) ----------
@@ -248,8 +248,9 @@ def licencias(pistas, catalogo=None):
         elif not c.get("atribucion"):
             out.append(_r(f"música {pid}", "FAIL", "falta texto de atribución"))
         else:
-            estado = "PASS" if c.get("content_id") is False and c.get("verificada_por_pista") else "WARN"
-            out.append(_r(f"música {pid}", estado, f"{c['licencia']} · {c['autor']}" + ("" if estado == "PASS" else " · licencia por pista y Content ID SIN verificar")))
+            ok = c.get("autoria_verificada_tag") and c.get("fuente_licencia") and c.get("credito_en_descripcion_obligatorio")
+            estado = "PASS" if ok else "WARN"
+            out.append(_r(f"música {pid}", estado, f"{c['licencia']} · {c['autor']} (autoría por etiqueta del MP3; licencia según FAQ oficial)" + (" · OBLIGATORIO pegar el crédito en la descripción (si no, Content ID puede reclamar)" if ok else " · falta verificación")))
             creditos.append(c["atribucion"])
     return out, "\n\n".join(creditos)
 

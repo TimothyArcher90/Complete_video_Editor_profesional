@@ -35,6 +35,7 @@ M_ARRIBA, M_LADO, M_ABAJO = 0.30, 0.15, 0.10
 M_PX = 0.010                 # + 1 % del alto del lienzo en todos los lados (absorbe el ruido de YuNet)
 TOL = 0.002                  # fracción de la caja (con margen) cubierta por píxeles de capa; por encima = solape
 UMBRAL_PX = 24               # gris (0-255) de la máscara a partir del cual un píxel cuenta como capa
+K_SUBS = 0.25                # margen de la cara para subtítulos (casi la cara a secas: el subtítulo vive pegado a la barbilla por diseño)
 CRITERIO_SUBS = 95.0         # % mínimo de fotogramas con cara sin solape de subtítulos (el mismo criterio de verificar_encuadre)
 ESCALAS = (1.0, 0.85, 0.7, 0.6)
 TIPOS = ("lower_thirds", "titulos", "cifras", "titulos_grandes", "cta")
@@ -55,12 +56,12 @@ def _dim_mascara(W, H):
     return wm, int(round(H * wm / W / 2) * 2)
 
 
-def caja_con_margen(c, W, H):
-    """c = (x0,y0,x1,y1) normalizado 0-1 -> caja en px del lienzo, dilatada."""
+def caja_con_margen(c, W, H, k=1.0):
+    """c = (x0,y0,x1,y1) normalizado 0-1 -> caja en px del lienzo, dilatada. k escala el margen (1 = gráficos; subtítulos usan K_SUBS)."""
     x0, y0, x1, y1 = c[0] * W, c[1] * H, c[2] * W, c[3] * H
     w, h = x1 - x0, y1 - y0
-    m = M_PX * H
-    return (max(0.0, x0 - M_LADO * w - m), max(0.0, y0 - M_ARRIBA * h - m), min(float(W), x1 + M_LADO * w + m), min(float(H), y1 + M_ABAJO * h + m))
+    m = M_PX * H * k
+    return (max(0.0, x0 - M_LADO * w * k - m), max(0.0, y0 - M_ARRIBA * h * k - m), min(float(W), x1 + M_LADO * w * k + m), min(float(H), y1 + M_ABAJO * h * k + m))
 
 
 def _union(cajas):
@@ -137,7 +138,7 @@ def _tramos(filas, fps):
     return out
 
 
-def medir_ass(ass, formato, caras, dur, fps=4.0):
+def medir_ass(ass, formato, caras, dur, fps=4.0, k_margen=1.0):
     """Mide el solape capa(ASS)-cara en cada instante. Devuelve {filas:[(t,cub)], tramos, con_cara, con_capa, sin_solape_pct}."""
     W, H = dims(formato)
     filas, con_capa = [], 0
@@ -149,7 +150,7 @@ def medir_ass(ass, formato, caras, dur, fps=4.0):
         cs = caras_cercanas(caras, t)
         if not cs:
             continue
-        caja = _union([caja_con_margen(c[1:5], W, H) for c in cs if abs(c[0] - t) <= 0.5 / fps + 0.26] or [caja_con_margen(c[1:5], W, H) for c in cs])
+        caja = _union([caja_con_margen(c[1:5], W, H, k_margen) for c in cs if abs(c[0] - t) <= 0.5 / fps + 0.26] or [caja_con_margen(c[1:5], W, H, k_margen) for c in cs])
         filas.append((t, _cubre(m, caja, W, H)))
     n = len(filas)
     malas = sum(1 for _, c in filas if c > TOL)
@@ -383,7 +384,7 @@ def revisar_y_corregir(base, plan, formato, ass_graficos_ruta, ass_subs_ruta, do
     informe["despues"]["clips"] = medir_clips(plan, formato, caras, fps)
     ms = {"tramos": [], "sin_solape_pct": 100.0, "con_cara": 0}
     if ass_subs_ruta and Path(ass_subs_ruta).exists():
-        ms = medir_ass(ass_subs_ruta, formato, caras, dur, fps)
+        ms = medir_ass(ass_subs_ruta, formato, caras, dur, fps, K_SUBS)
     informe["despues"]["subtitulos"] = {k: v for k, v in ms.items() if k != "filas"}
     fallos = [{"capa": "gráficos", **t} for t in mg2["tramos"]] + [{"capa": f"clip {c['idx']}", "t0": c["t0"], "t1": c["t1"], "max": c["max"]} for c in informe["despues"]["clips"]]
     if ms["sin_solape_pct"] < CRITERIO_SUBS:

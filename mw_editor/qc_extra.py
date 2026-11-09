@@ -682,6 +682,49 @@ def m_capas(ctx):
     return out
 
 
+def m_cara_capas(ctx):
+    """M16c puerta dura capas/cara (revisor_capas: ningún gráfico sobre la cara en ningún instante; subtítulos >= 95 % de fotogramas limpios)
+    y M16d encuadre (ojos en 30-38 % del alto, cabeza entera) medidos con YuNet sobre el base."""
+    import re as _re
+    from . import revisor_capas as RC
+    from . import verificar_encuadre as VE
+    out = []
+    mv = _re.search(r"_v(\d+)$", ctx.pre)
+    ruta = ctx.proj / "00_DOCS" / f"revision_capas_{ctx.fm}_v{mv.group(1)}.json" if mv else None
+    inf = json.loads(ruta.read_text(encoding="utf-8")) if ruta and ruta.exists() else None
+    fps = max(0.25, min(2.0, 600.0 / max(ctx.dur, 1.0)))
+    caras = None
+    if inf is None and (ctx.graf_ass or ctx.subs_ass):
+        caras, _ = VE.caras_en(str(ctx.base), fps)
+        g = RC.medir_ass(str(ctx.graf_ass), ctx.fm, caras, ctx.dur, fps) if ctx.graf_ass else None
+        s_ = RC.medir_ass(str(ctx.subs_ass), ctx.fm, caras, ctx.dur, fps, RC.K_SUBS) if ctx.subs_ass else None
+        fallos = (g["tramos"] if g else []) + ([] if (not s_ or s_["sin_solape_pct"] >= RC.CRITERIO_SUBS) else s_["tramos"])
+        inf = {"fallos": fallos, "acciones": [], "despues": {"subtitulos": {"sin_solape_pct": s_["sin_solape_pct"] if s_ else None, "con_cara": s_["con_cara"] if s_ else 0},
+                                                              "graficos": {"con_cara": g["con_cara"] if g else 0, "con_capa": g["con_capa"] if g else 0}}, "panel_completo": []}
+    if inf is None:
+        out.append(M.na("M16c", "Capas sobre la cara (puerta dura)", "sin gráficos ni subtítulos que medir"))
+    else:
+        fl = inf["fallos"]
+        sp = inf["despues"]["subtitulos"].get("sin_solape_pct")
+        det = (f"{len(inf.get('acciones', []))} capas corregidas por el revisor (reubicar/acortar/panel) · {len(inf.get('panel_completo', []))} a pantalla completa · "
+               f"subtítulos sin solape {sp}% de los fotogramas con cara" if sp is not None else "sin subtítulos")
+        if fl:
+            det = "SOBRE LA CARA: " + "; ".join(f"{f['capa']} {f['t0']:.1f}-{f['t1']:.1f}s" for f in fl[:6]) + " · " + det
+        out.append(M.metrica("M16c", "Capas sobre la cara (puerta dura)", len(fl), "FAIL" if fl else "PASS", "0 tramos de capa sobre la cara (margen incluido)", "cualquier tramo = FAIL (regla de David)",
+                             det, "oficial", "alta", puntaje=0.0 if fl else 1.0, duro=True, informativo=False))
+    r = VE.medir(str(ctx.base), None, ctx.fm, fps)
+    n = r["con_cara"]
+    if not n:
+        out.append(M.na("M16d", "Encuadre: ojos 30-38 % y cabeza entera", "ninguna cara detectada"))
+    else:
+        o, cc = r["ojos_en_30_38_pct"], r["cabeza_cortada_pct"]
+        st = "PASS" if (o >= 80 and cc <= 2) else ("WARN" if (o >= 50 and cc <= 10) else "FAIL")
+        out.append(M.metrica("M16d", "Encuadre: ojos 30-38 % y cabeza entera", o, st, ">= 80 % de muestras con ojos en 30-38 % y cabeza cortada <= 2 %", ">= 50 % y <= 10 %",
+                             f"ojos {r['ojos_min']:.2f}-{r['ojos_max']:.2f} (media {r['ojos_media']:.2f}) · en banda {o}% · cabeza cortada {cc}% · {n} muestras con cara",
+                             "estimado", "media", puntaje=M.puntaje_rango(o / 100.0, 0.80, 1.0, 0.50, 1.0, 0.2, 1.0), unidad="% en banda", duro=False))
+    return out
+
+
 # =====================================================================================
 # Entrega: parámetros ffprobe por plataforma, duración
 # =====================================================================================
@@ -846,7 +889,7 @@ def envolver_viejos(checks):
 def evaluar_formato(ctx, checks_viejos):
     """Todas las métricas de un formato (viejas envueltas + ampliadas). Cada paso falla de forma aislada."""
     ms = envolver_viejos(checks_viejos)
-    for f in (m_ritmo, m_capas, m_entrega, m_duracion):
+    for f in (m_ritmo, m_capas, m_cara_capas, m_entrega, m_duracion):
         try:
             ms += f(ctx)
         except Exception as e:  # noqa: BLE001

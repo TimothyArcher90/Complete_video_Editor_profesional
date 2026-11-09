@@ -82,6 +82,13 @@ def cmd_editar(a):
     for d_ in dec_i:
         log("imagen:", d_)
     post = [pre.pop()] if pre and pre[-1].startswith("unsharp") else []
+    if os.environ.get("MW_SIN_HOJA_COLOR") != "1":      # color en 8 pasos visibles: hoja de contactos antes/después + verificación final (00_DOCS/color_pasos.json)
+        try:
+            from . import color_pasos as cp
+            _r = cp.generar(src, a.out, n=3, look=getattr(a, "look", None), ident=nombre)
+            log(f"color en 8 pasos: {_r['estado']} · {_r['hoja_antes_despues']}")
+        except Exception as e:  # noqa: BLE001  (ayuda visual: no frena el render)
+            log("AVISO: hoja de color en 8 pasos no generada:", f"{type(e).__name__}: {str(e)[:140]}")
     # caras
     caras = pl.detectar_caras(src, dur)
     formatos = {"ambos": ["vertical", "horizontal"], "todos": ["vertical", "cuadrado", "horizontal"]}.get(a.formato, [a.formato])
