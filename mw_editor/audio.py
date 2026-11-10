@@ -9,14 +9,25 @@ from .common import BRAND, FFMPEG, ROOT, ffq, log, run
 MODELO_RNNOISE = ROOT / "brand" / "models" / "rnnoise_bd.rnnn"
 
 
-def cadena(analisis_audio, usar_rnnoise=True):
+DFN_EXE = ROOT / "brand" / "bin" / "deep-filter.exe"
+CENTINELA_DFN = "@@DFN@@"
+
+
+def dfn_disponible():
+    return DFN_EXE.exists()
+
+
+def cadena(analisis_audio, usar_rnnoise=True, usar_dfn=False):
     """Devuelve (filtros:list[str], decisiones:list[str]) usando las mediciones."""
     f, dec = [], []
     suelo = (analisis_audio or {}).get("suelo_ruido_db")
     f.append("highpass=f=80:poles=2")
     dec.append("highpass 80 Hz (retumbo/ruido de mesa)")
     if suelo is not None and suelo > -58:
-        if usar_rnnoise and MODELO_RNNOISE.exists():
+        if usar_dfn:
+            f.append(CENTINELA_DFN)
+            dec.append(f"DeepFilterNet (MIT/Apache, atenuación limitada a 25 dB): suelo medido {suelo:.0f} dB")
+        elif usar_rnnoise and MODELO_RNNOISE.exists():
             f.append(f"arnndn=m='{ffq(MODELO_RNNOISE)}':mix=0.85")
             dec.append(f"RNNoise (BSD) mix 0.85: suelo medido {suelo:.0f} dB")
         else:
@@ -51,11 +62,19 @@ def procesar(src, wav_out, analisis, keep=None, extra_in=None):
         guion = Path(wav_out).with_suffix(".cut.txt")
         guion.write_text(filtro_concat(keep, video=False, audio=True).replace("[acat]", "[acat]"), encoding="utf-8")
         cortes = f"@{guion}"
-    filtros, dec = cadena((analisis or {}).get("audio"))
+    suelo = ((analisis or {}).get("audio") or {}).get("suelo_ruido_db")
+    usar_dfn = dfn_disponible() and suelo is not None and suelo > -58
+    filtros, dec = cadena((analisis or {}).get("audio"), usar_dfn=usar_dfn)
+    etapa_b = None
+    if CENTINELA_DFN in filtros:
+        i = filtros.index(CENTINELA_DFN)
+        filtros, etapa_b = filtros[:i], filtros[i + 1:]
     pre = ",".join(filtros)
 
-    def render(chain_str, out):
-        if keep:
+    def render(chain_str, out, fuente=None):
+        if fuente is not None:
+            run([FFMPEG, "-hide_banner", "-y", "-v", "error", "-i", str(fuente), "-af", chain_str or "anull", "-ar", "48000", "-c:a", "pcm_s24le", out])
+        elif keep:
             # filtro_complex con script + cadena
             script = Path(guion).read_text(encoding="utf-8")
             script += f";[acat]{chain_str}[aout]"
@@ -68,6 +87,20 @@ def procesar(src, wav_out, analisis, keep=None, extra_in=None):
 
     tmp = Path(wav_out).with_suffix(".pre.wav")
     render(pre, tmp)
+    if etapa_b is not None:
+        try:
+            a16 = Path(wav_out).with_suffix(".dfn_in.wav")
+            run([FFMPEG, "-hide_banner", "-y", "-v", "error", "-i", str(tmp), "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", str(a16)])
+            limpio = limpiar_voz(a16, Path(wav_out).parent / "_dfn", atten_db=25)
+            render(",".join(etapa_b), tmp, fuente=limpio)
+            a16.unlink(missing_ok=True)
+            Path(limpio).unlink(missing_ok=True)
+        except Exception as e:                      # salvaguarda: si DeepFilterNet falla, cadena clásica con RNNoise/afftdn
+            log(f"DeepFilterNet falló ({e}); se usa la cadena clásica")
+            dec.append(f"DeepFilterNet falló ({e}): cadena clásica")
+            f2, d2 = cadena((analisis or {}).get("audio"), usar_dfn=False)
+            dec.extend(d2[1:2])
+            render(",".join(f2), tmp)
     m = _medir_loudnorm("", tmp)
     objetivo = BRAND["audio"]
     ln = (f"loudnorm=I={objetivo['lufs']}:TP={objetivo['tp']}:LRA={objetivo['lra']}"
@@ -94,7 +127,7 @@ def procesar(src, wav_out, analisis, keep=None, extra_in=None):
     return res
 
 
-def limpiar_voz(wav_in, carpeta_out):
+def limpiar_voz(wav_in, carpeta_out, atten_db=25):
     """Limpieza de voz con DeepFilterNet (MIT/Apache-2.0, binario oficial v0.5.6 en brand/bin). Entrada: WAV mono 48 kHz de la VOZ SOLA (sin música). Devuelve la ruta del WAV limpio.
     Medido en 20 s del Arca (con música de fondo): suelo de ruido −30,5 → −48,1 dB, voz sin cambio. Aplicar ANTES de mezclar la música; no sobre el MP4 final."""
     import subprocess
@@ -104,5 +137,5 @@ def limpiar_voz(wav_in, carpeta_out):
     if not exe.exists():
         raise FileNotFoundError(f"falta {exe}: descargar de github.com/Rikorose/DeepFilterNet/releases/tag/v0.5.6")
     Path(carpeta_out).mkdir(parents=True, exist_ok=True)
-    subprocess.run([str(exe), "-o", str(carpeta_out), str(wav_in)], check=True, stdin=subprocess.DEVNULL, capture_output=True)
+    subprocess.run([str(exe), "-a", str(atten_db), "-o", str(carpeta_out), str(wav_in)], check=True, stdin=subprocess.DEVNULL, capture_output=True)
     return Path(carpeta_out) / Path(wav_in).name
