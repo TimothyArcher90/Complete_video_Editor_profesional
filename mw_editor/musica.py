@@ -29,7 +29,7 @@ SR = 48000
 CANDIDATAS = [Path(r"E:\CARPETA OUTPUTS IA 2026\Video con Ia editor\MUSICA"), Path(r"C:\Users\tante\MacroWise\MUSICA")]
 LICENCIAS_OK = {"CC0", "Pixabay", "YouTubeAudioLibrary", "CC-BY", "Mixkit"}
 BRECHA_CAMA = 9.0        # LU: música sin voz por debajo de la voz (intro/outro)
-BRECHA_VOZ = 17.0        # LU: música CON voz por debajo de la voz (16-20 = PASS)
+BRECHA_VOZ = 17.0        # LU: música CON voz por debajo de la voz (16-20 = PASS). ELEGIDA POR DAVID el 2026-11-18 tras A/B 13/15/17 LU
 PRE, BAJA, SUBE, GAP_FUSION = 0.12, 0.25, 0.9, 0.6      # s
 CADENA_EQ = ("highpass=f=100,equalizer=f=1000:t=q:w=1.2:g=-2,equalizer=f=2500:t=q:w=1.0:g=-4,lowpass=f=13000,"
              "acompressor=threshold=0.1:ratio=2:attack=30:release=300")
@@ -141,6 +141,9 @@ def analizar_pista(ruta, max_s=240):
     env = librosa.onset.onset_strength(y=y, sr=sr)
     tempo, fr = librosa.beat.beat_track(onset_envelope=env, sr=sr)
     tempo = float(np.atleast_1d(tempo)[0])
+    if tempo > 140 and len(fr) >= 8:                           # librosa tiende al doble tempo: se pliega a la mitad (media-velocidad)
+        k = int(np.argmax([env[fr[o::2]].mean() for o in (0, 1)]))
+        fr, tempo = fr[k::2], tempo / 2
     bt = librosa.frames_to_time(fr, sr=sr)
     fase = 0
     if len(fr) >= 8:                                           # el compás cuyo beat 1 tiene más energía de onset
@@ -323,7 +326,7 @@ def musica_para_publicar(proyecto, archivos, formato="vertical", tono="informati
     return {"estado": q["estado"], "detalle": q.get("detalle", ""), "archivos": salidas, "stem": str(stem)}
 
 
-def probar(video_voz, pista, salida, palabras_json=None):
+def probar(video_voz, pista, salida, palabras_json=None, brecha_voz=BRECHA_VOZ):
     """Prueba suelta: un MP4 solo con voz + una pista -> MP4 con música y el informe de la puerta. No toca catálogos."""
     video_voz, pista, salida = Path(video_voz), Path(pista), Path(salida)
     dur = probe(str(video_voz))["duracion"]
@@ -331,7 +334,7 @@ def probar(video_voz, pista, salida, palabras_json=None):
     palabras = json.loads(Path(palabras_json).read_text(encoding="utf-8-sig")) if palabras_json else None
     iv = mascara_habla(palabras, dur, voz)
     an = analizar_pista(pista)
-    stem, info = mezclar_stem(voz, pista, iv, dur, an)
+    stem, info = mezclar_stem(voz, pista, iv, dur, an, brecha_voz=brecha_voz)
     stem_wav = salida.with_name(salida.stem + "_stem.wav")
     _escribir(stem_wav, stem)
     aplicar_musica(video_voz, stem_wav, salida)
@@ -345,6 +348,6 @@ if __name__ == "__main__":
     import sys
     sys.stdout.reconfigure(encoding="utf-8")
     if len(sys.argv) >= 5 and sys.argv[1] == "probar":
-        probar(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5] if len(sys.argv) > 5 else None)
+        probar(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5] if len(sys.argv) > 5 else None, float(sys.argv[6]) if len(sys.argv) > 6 else BRECHA_VOZ)
     else:
         print(__doc__)

@@ -66,3 +66,4 @@ Pendiente por orden de impacto: reencuadre con MediaPipe Face Landmarker + One-E
 | Biblioteca | Catálogo con licencia por pista; ahora en `C:\Users\tante\MacroWise\MUSICA` (E: no siempre está); candidatas en `docs/investigacion/2026-11-18_musica_biblioteca.md` | ⏳ falta descargar (requiere OK de David) |
 | Selección | `score` de 5 factores (BPM vs energía del habla, mood, cama baja, duración, fiabilidad de beats); pesos ESTIMADOS | ✅ calibrar con reels aprobados |
 Prueba real (reel `tiempo_libre`, pista de prueba): voz −14,6 LUFS, música −31,6 en habla, brecha 17,5 LU = PASS. Falta que David oiga y fije la brecha preferida (propuesta: 3 mezclas A/B a 13/15/17 LU).
+- **Decisión de David (2026-11-18):** tras oír A/B 13/15/17 LU eligió **17 LU** (la de PASS). Es el predeterminado de `BRECHA_VOZ`.
