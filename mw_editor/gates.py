@@ -372,6 +372,17 @@ def luces_quemadas(video, n=8, tope=0.02):
     return _r("luces quemadas en cara", "FAIL" if m > tope else ("WARN" if m > tope / 4 else "PASS"), f"{m * 100:.2f} % de la cara con los 3 canales ≥ 250 (FAIL > {tope * 100:.0f} %; no corregible en post)", valor=round(m, 4))
 
 
+
+def mezcla_musica(proyecto):
+    """Puerta de la mezcla de música (voz/música en LU durante el habla, arranque y cierre). Lee 00_DOCS/musica.json generado por musica.musicar.
+    Umbrales ESTIMADOS (informe 2026-11-18_musica_mezcla): PASS mediana 16-22 LU y p10 >= 13; FAIL < 12 o > 26."""
+    f = Path(proyecto) / "00_DOCS" / "musica.json"
+    if not f.exists():
+        return _r("mezcla de música", "WARN", "sin música (no hay 00_DOCS/musica.json)")
+    q = json.loads(f.read_text(encoding="utf-8")).get("puerta", {})
+    return _r("mezcla de música", q.get("estado", "WARN"), q.get("detalle", "sin medición"), **{k: v for k, v in q.items() if k not in ("estado", "detalle")})
+
+
 def correr_todas(proyecto, destino, base=None, final=None, plan=None, pistas=()):
     """Bloque único para el final de cualquier video. Devuelve (estado_global, lista de puertas)."""
     P = list(preflight(destino))
@@ -382,6 +393,8 @@ def correr_todas(proyecto, destino, base=None, final=None, plan=None, pistas=())
         P.append(colisiones(base, final, plan))
     if (Path(proyecto) / "00_DOCS").exists() and any((Path(proyecto) / "00_DOCS").glob("revision_capas_*_v[0-9]*.json")):
         P.append(capas_entre_si(proyecto))
+    if (Path(proyecto) / "00_DOCS" / "musica.json").exists():
+        P.append(mezcla_musica(proyecto))
     if pistas:
         P += licencias(pistas)[0]
     est = "FAIL" if any(p["estado"] == "FAIL" for p in P) else ("WARN" if any(p["estado"] == "WARN" for p in P) else "PASS")

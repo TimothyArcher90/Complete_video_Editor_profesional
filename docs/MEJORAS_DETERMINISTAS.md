@@ -53,3 +53,16 @@ python -m mw_editor.gates versiones --proyecto P         # propuesta, no borra
 | `gates.luces_quemadas` | % de cara con 3 canales ≥ 250; > 2 % = FAIL (no corregible en post) | ✅ largo: 0 % |
 | `gates.delta_color` | Añade ΔE2000 al ΔE76 (JND de ΔE2000 ~1 = ESTIMADO) | ✅ |
 Pendiente por orden de impacto: reencuadre con MediaPipe Face Landmarker + One-Euro (aire hoy 3,5 % vs 8–15 %), DeepFilterNet para voz (binario), máscara de piel SelfieMulticlass, tabla `PLATAFORMAS` (Reels 180 s y TikTok 600 s sin verificar). Licencias: whisper-timestamped AGPL, RVM/color-matcher GPL, InsightFace y NISQA no comerciales = fuera.
+
+## Música en reels (2026-11-18) — `mw_editor/musica.py` v2
+| Qué | Regla determinista | Estado |
+|---|---|---|
+| Nivel | Música RELATIVA a la voz medida: cama sin voz = LUFS_voz − 9; con voz = LUFS_voz − 17 (ducking 8 dB). Antes: −24 LUFS absolutos → −33/−50 (inaudible) | ✅ |
+| Ducking | Envolvente por palabras (no sidechain): baja 0,25 s antes, sube 0,9 s tras la voz, fusiona pausas < 0,6 s, curvas coseno | ✅ |
+| Preparación | highpass 100 Hz, −4 dB@2,5 kHz, −2 dB@1 kHz, lowpass 13 kHz, compresión 2:1, MONO | ✅ |
+| Sincronía | Primer downbeat (librosa) en el fotograma 0; bucle por compases con crossfade 120 ms; fade-out 1,2-2,5 s | ✅ (snap de cortes a beat: pendiente, solo si David lo pide) |
+| Puerta | `gates.mezcla_musica`: brecha voz−música en habla, mediana 16-22 LU PASS, p10 ≥ 13; FAIL < 12 o > 26. UMBRALES ESTIMADOS | ✅ |
+| Entrega | `produce` crea por plataforma `*_con_musica.mp4` y conserva el limpio (TikTok/IG: añadir audio comercial en la app); stem aparte; crédito en `00_DOCS/musica_creditos.txt` | ✅ |
+| Biblioteca | Catálogo con licencia por pista; ahora en `C:\Users\tante\MacroWise\MUSICA` (E: no siempre está); candidatas en `docs/investigacion/2026-11-18_musica_biblioteca.md` | ⏳ falta descargar (requiere OK de David) |
+| Selección | `score` de 5 factores (BPM vs energía del habla, mood, cama baja, duración, fiabilidad de beats); pesos ESTIMADOS | ✅ calibrar con reels aprobados |
+Prueba real (reel `tiempo_libre`, pista de prueba): voz −14,6 LUFS, música −31,6 en habla, brecha 17,5 LU = PASS. Falta que David oiga y fije la brecha preferida (propuesta: 3 mezclas A/B a 13/15/17 LU).

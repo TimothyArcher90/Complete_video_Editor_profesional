@@ -85,8 +85,16 @@ def crear_reel(master, c, k, nombre, raiz, palabras, brief, rapido, idioma, plat
         estado = f"QC no corrió: {str(e)[:60]}"
     t_edit = time.time() - t0
     fichas = ex.exportar(rp, plataformas, rapido=rapido, cta=brief.get("cta", ""), idioma=idioma, tipo="corto") if plataformas else []
+    pub = [f["archivo_publicar"] for f in fichas]
+    mus = {}
+    if fichas:                                           # música: stem aparte + versión «con_musica» por plataforma; el MP4 limpio se conserva
+        try:
+            from .musica import musica_para_publicar
+            mus = musica_para_publicar(rp, pub)
+        except Exception as e:  # noqa: BLE001
+            mus = {"estado": "WARN", "detalle": f"música no corrió: {str(e)[:100]}", "archivos": []}
     return {"proyecto": str(rp), "reel": k, "ini": c["ini"], "fin": c["fin"], "dur": c["dur"], "puntuacion": c["puntuacion"], "gancho": c["gancho"], "qc": estado,
-            "segundos_edicion": round(t_edit, 1), "segundos_total": round(time.time() - t0, 1), "publicar": [f["archivo_publicar"] for f in fichas]}
+            "segundos_edicion": round(t_edit, 1), "segundos_total": round(time.time() - t0, 1), "publicar": pub + mus.get("archivos", []), "musica": {k_: v for k_, v in mus.items() if k_ != "archivos"}}
 
 
 def produce(master, raiz=None, brief_path=None, nombre=None, n_reels=5, min_clip=20.0, max_clip=90.0, plataformas=None, rapido=True,
